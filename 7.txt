@@ -1,0 +1,622 @@
+==============================================
+APP: Registration and Login using SQLiteDatabase
+==============================================
+NOTE: 
+1. Create two additional Activities: 'RegisterActivity' and 'HomeActivity'.
+2. Create the Database Helper class: 'DatabaseHelper.java'.
+3. This uses a simple password check for demonstration, but real apps require stronger hashing.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".RegisterActivity" android:exported="false" />
+
+        <activity android:name=".HomeActivity" android:exported="false" />
+    </application>
+</manifest>
+
+--- Database Helper (DatabaseHelper.java) ---
+
+package com.example.authapp;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+public class DatabaseHelper extends SQLiteOpenHelper {
+    private static final String DATABASE_NAME = "login.db";
+    private static final int DATABASE_VERSION = 1;
+    public static final String TABLE_USERS = "users";
+    public static final String COL_ID = "id";
+    public static final String COL_USERNAME = "username";
+    public static final String COL_PASSWORD = "password";
+
+    public DatabaseHelper(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        String CREATE_TABLE = "CREATE TABLE " + TABLE_USERS + " (" +
+                COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                COL_USERNAME + " TEXT UNIQUE, " +
+                COL_PASSWORD + " TEXT)";
+        db.execSQL(CREATE_TABLE);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_USERS);
+        onCreate(db);
+    }
+
+    // --- Registration (Insert) ---
+    public boolean registerUser(String username, String password) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(COL_USERNAME, username);
+        contentValues.put(COL_PASSWORD, password); // In real app, hash this!
+        long result = db.insert(TABLE_USERS, null, contentValues);
+        db.close();
+        return result != -1; // returns true on success
+    }
+
+    // --- Login (Check) ---
+    public boolean checkUser(String username, String password) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String[] columns = { COL_ID };
+        String selection = COL_USERNAME + " = ?" + " AND " + COL_PASSWORD + " = ?";
+        String[] selectionArgs = { username, password };
+
+        Cursor cursor = db.query(TABLE_USERS, columns, selection, selectionArgs, null, null, null);
+        int cursorCount = cursor.getCount();
+        cursor.close();
+        db.close();
+
+        return cursorCount > 0; // returns true if user/pass combination is found
+    }
+}
+
+--- UI (activity_main.xml - Login) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="30dp">
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="User Login" android:textSize="32sp" android:textStyle="bold" android:layout_marginBottom="30dp"/>
+
+    <EditText android:id="@+id/et_login_username" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="Username" android:inputType="text"/>
+
+    <EditText android:id="@+id/et_login_password" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:hint="Password" android:inputType="textPassword" android:layout_marginBottom="20dp"/>
+
+    <Button android:id="@+id/btn_login" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="Login" android:layout_marginBottom="10dp"/>
+
+    <TextView android:id="@+id/tv_register_link" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="New user? Register here" android:textColor="@android:color/holo_blue_dark" android:clickable="true"/>
+</LinearLayout>
+
+--- Functionality (MainActivity.java - Login Logic) ---
+
+package com.example.authapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private DatabaseHelper dbHelper;
+    private EditText etUsername, etPassword;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        dbHelper = new DatabaseHelper(this);
+        etUsername = findViewById(R.id.et_login_username);
+        etPassword = findViewById(R.id.et_login_password);
+        Button btnLogin = findViewById(R.id.btn_login);
+        TextView tvRegister = findViewById(R.id.tv_register_link);
+
+        btnLogin.setOnClickListener(v -> loginUser());
+        
+        tvRegister.setOnClickListener(v -> {
+            startActivity(new Intent(MainActivity.this, RegisterActivity.class));
+        });
+    }
+
+    private void loginUser() {
+        String user = etUsername.getText().toString().trim();
+        String pass = etPassword.getText().toString();
+
+        if (user.isEmpty() || pass.isEmpty()) {
+            Toast.makeText(this, "Please enter all credentials.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (dbHelper.checkUser(user, pass)) {
+            Toast.makeText(this, "Login Successful!", Toast.LENGTH_LONG).show();
+            // Navigate to Home Activity
+            Intent intent = new Intent(MainActivity.this, HomeActivity.class);
+            intent.putExtra("USERNAME", user);
+            startActivity(intent);
+            finish(); // Prevent returning to login screen with back button
+        } else {
+            Toast.makeText(this, "Invalid Username or Password.", Toast.LENGTH_LONG).show();
+        }
+    }
+}
+
+--- Functionality (RegisterActivity.java - Registration Logic) ---
+// (Requires activity_register.xml layout - simple form with two EditTexts and a Register Button)
+package com.example.authapp;
+// ... imports ...
+
+public class RegisterActivity extends AppCompatActivity {
+    // ... layout setup ...
+    private DatabaseHelper dbHelper;
+    // ... etUsername, etPassword, btnRegister ...
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        // ... layout setup and initialization ...
+        dbHelper = new DatabaseHelper(this);
+        // ... btnRegister.setOnClickListener(v -> registerUser());
+    }
+
+    private void registerUser() {
+        // ... validation ...
+        if (dbHelper.registerUser(user, pass)) {
+            Toast.makeText(this, "Registration Successful!", Toast.LENGTH_LONG).show();
+            finish(); // Go back to Login Screen
+        } else {
+            Toast.makeText(this, "Registration Failed! Username may already exist.", Toast.LENGTH_LONG).show();
+        }
+    }
+}
+
+--- Functionality (HomeActivity.java - User Home Screen) ---
+// (Requires activity_home.xml layout - simple TextView to display welcome message)
+package com.example.authapp;
+// ... imports ...
+
+public class HomeActivity extends AppCompatActivity {
+    // ... layout setup ...
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        // ... layout setup and initialization ...
+        String username = getIntent().getStringExtra("USERNAME");
+        TextView welcomeText = findViewById(R.id.tv_welcome);
+        welcomeText.setText("Welcome, " + username + "!");
+    }
+}
+
+
+
+
+==============================================
+APP: Toggle Flashlight (ON/OFF)
+==============================================
+NOTE: Requires CAMERA and FLASHlight permissions, and the CameraManager (API 21+).
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FLASHLIGHT" />
+
+    <uses-feature android:name="android.hardware.camera.flash" />
+
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tv_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Flashlight Status: OFF"
+        android:textSize="20sp"
+        android:layout_marginBottom="40dp"/>
+
+    <Button
+        android:id="@+id/btn_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TURN ON"
+        android:textSize="24sp"
+        android:padding="20dp"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.flashlightapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Context;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private CameraManager cameraManager;
+    private String cameraId;
+    private boolean isFlashOn = false;
+    private Button toggleButton;
+    private TextView statusText;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        toggleButton = findViewById(R.id.btn_toggle);
+        statusText = findViewById(R.id.tv_status);
+        
+        // 1. Get CameraManager and Camera ID
+        getCameraSetup();
+
+        toggleButton.setOnClickListener(v -> toggleFlashlight());
+    }
+
+    private void getCameraSetup() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+            try {
+                // Get the ID of the back camera
+                if (cameraManager != null) {
+                    cameraId = cameraManager.getCameraIdList()[0]; 
+                }
+            } catch (CameraAccessException e) {
+                Toast.makeText(this, "Camera Access Error", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            Toast.makeText(this, "Requires Android Lollipop (API 21) or newer.", Toast.LENGTH_LONG).show();
+            toggleButton.setEnabled(false);
+        }
+    }
+
+    private void toggleFlashlight() {
+        if (cameraManager == null || cameraId == null) {
+            Toast.makeText(this, "Flashlight not supported or available.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            isFlashOn = !isFlashOn;
+            
+            // Set the torch mode ON or OFF
+            cameraManager.setTorchMode(cameraId, isFlashOn);
+            
+            // Update UI
+            if (isFlashOn) {
+                toggleButton.setText("TURN OFF");
+                statusText.setText("Flashlight Status: ON");
+            } else {
+                toggleButton.setText("TURN ON");
+                statusText.setText("Flashlight Status: OFF");
+            }
+
+        } catch (CameraAccessException e) {
+            Toast.makeText(this, "Failed to toggle flashlight.", Toast.LENGTH_SHORT).show();
+            isFlashOn = !isFlashOn; // Revert state on failure
+        }
+    }
+
+    // Ensure the flashlight is turned off when the app exits
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (isFlashOn && cameraManager != null) {
+            try {
+                cameraManager.setTorchMode(cameraId, false);
+                isFlashOn = false;
+            } catch (CameraAccessException e) {
+                // Ignore failure during stop
+            }
+        }
+    }
+}
+
+
+
+
+==============================================
+APP: Retrieve and Display Contacts
+==============================================
+NOTE: Requires READ_CONTACTS permission. On modern Android, this is a runtime permission.
+For simplicity, this example assumes the user grants the permission.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<uses-permission android:name="android.permission.READ_CONTACTS" />
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Phone Contacts List"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp"/>
+
+    <Button
+        android:id="@+id/btn_load_contacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load Contacts (Grant Permission First!)"
+        android:layout_marginBottom="10dp"/>
+
+    <ListView
+        android:id="@+id/contacts_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.retrievecontactsapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.os.Bundle;
+import android.provider.ContactsContract;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ListView;
+import android.widget.Toast;
+import java.util.ArrayList;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final int PERMISSIONS_REQUEST_READ_CONTACTS = 1;
+    private ListView contactsListView;
+    private Button loadContactsButton;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        contactsListView = findViewById(R.id.contacts_list);
+        loadContactsButton = findViewById(R.id.btn_load_contacts);
+
+        loadContactsButton.setOnClickListener(v -> checkAndLoadContacts());
+    }
+
+    private void checkAndLoadContacts() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted, request it
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_CONTACTS},
+                    PERMISSIONS_REQUEST_READ_CONTACTS);
+        } else {
+            // Permission has already been granted
+            loadContacts();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSIONS_REQUEST_READ_CONTACTS) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                loadContacts();
+            } else {
+                Toast.makeText(this, "Permission denied to read contacts.", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void loadContacts() {
+        ArrayList<String> contactList = new ArrayList<>();
+        
+        // 1. Use ContentResolver to query the system Contacts Provider
+        Cursor cursor = getContentResolver().query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            null,
+            null,
+            null,
+            ContactsContract.Contacts.DISPLAY_NAME + " ASC" // Sort by name
+        );
+
+        if (cursor != null && cursor.getCount() > 0) {
+            while (cursor.moveToNext()) {
+                // 2. Extract Name and Phone Number
+                String name = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME));
+                String phoneNumber = cursor.getString(cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER));
+                
+                contactList.add(name + "\n(" + phoneNumber + ")");
+            }
+            cursor.close();
+        } else {
+            Toast.makeText(this, "No contacts found.", Toast.LENGTH_SHORT).show();
+        }
+
+        // 3. Display the contacts in the ListView
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, contactList);
+        contactsListView.setAdapter(adapter);
+    }
+}
+
+
+
+
+
+==============================================
+APP: Parse JSON Object and Array
+==============================================
+NOTE: The JSON string is hardcoded in the Java file for simplicity.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Parsed JSON Output"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp"/>
+
+    <TextView
+        android:id="@+id/tv_json_output"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="vertical"
+        android:minLines="10"
+        android:maxLines="20"
+        android:background="#EEE"
+        android:padding="8dp"/>
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.jsonparsingapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.widget.TextView;
+import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.json.JSONException;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView jsonOutputTextView;
+
+    // Hardcoded JSON string for parsing
+    private static final String JSON_DATA = "{" +
+            "\"company\": \"Tech Corp\"," +
+            "\"year\": 2024," +
+            "\"is_active\": true," +
+            "\"employees\": [" +
+            "    {\"name\": \"Alice\", \"role\": \"Manager\"}," +
+            "    {\"name\": \"Bob\", \"role\": \"Engineer\"}," +
+            "    {\"name\": \"Charlie\", \"role\": \"Designer\"}" +
+            "]" +
+            "}";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        
+        jsonOutputTextView = findViewById(R.id.tv_json_output);
+        parseJsonData();
+    }
+
+    private void parseJsonData() {
+        StringBuilder output = new StringBuilder();
+        try {
+            // 1. Create the main JSONObject
+            JSONObject mainObject = new JSONObject(JSON_DATA);
+            
+            // 2. Extract simple key-value pairs
+            String company = mainObject.getString("company");
+            int year = mainObject.getInt("year");
+            boolean isActive = mainObject.getBoolean("is_active");
+            
+            output.append("--- JSON Object Data ---\n");
+            output.append("Company: ").append(company).append("\n");
+            output.append("Year: ").append(year).append("\n");
+            output.append("Active: ").append(isActive).append("\n\n");
+            
+            // 3. Extract the JSONArray
+            JSONArray employeesArray = mainObject.getJSONArray("employees");
+            
+            output.append("--- JSON Array Data (Employees) ---\n");
+            for (int i = 0; i < employeesArray.length(); i++) {
+                // Get each element as a JSONObject
+                JSONObject employee = employeesArray.getJSONObject(i);
+                
+                String name = employee.getString("name");
+                String role = employee.getString("role");
+                
+                output.append("Employee ").append(i + 1).append(": ").append(name);
+                output.append(" (Role: ").append(role).append(")\n");
+            }
+            
+            jsonOutputTextView.setText(output.toString());
+
+        } catch (JSONException e) {
+            output.append("JSON Parsing Error: ").append(e.getMessage());
+            Toast.makeText(this, "Error parsing JSON data.", Toast.LENGTH_LONG).show();
+            jsonOutputTextView.setText(output.toString());
+        }
+    }
+}

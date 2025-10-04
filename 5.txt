@@ -1,0 +1,677 @@
+==============================================
+APP: Simple ListView (Contacts List)
+==============================================
+NOTE: Uses an ArrayAdapter for basic string display.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Simple Contacts List"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp"/>
+
+    <ListView
+        android:id="@+id/contacts_list_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.simplelistviewapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        ListView listView = findViewById(R.id.contacts_list_view);
+
+        // 1. Define the data source (Array of Strings)
+        String[] contacts = new String[] {
+            "Alice Smith - 555-0101",
+            "Bob Johnson - 555-0102",
+            "Charlie Brown - 555-0103",
+            "Diana Prince - 555-0104",
+            "Eve Adams - 555-0105",
+            "Frank Miller - 555-0106"
+        };
+
+        // 2. Create the ArrayAdapter
+        // Params: Context, Layout of a single row, Data array
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+            this,
+            android.R.layout.simple_list_item_1, // Default Android layout for a single TextView item
+            contacts
+        );
+
+        // 3. Set the adapter to the ListView
+        listView.setAdapter(adapter);
+        
+        // 4. Handle item clicks (optional)
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String contactName = (String) parent.getItemAtPosition(position);
+            Toast.makeText(MainActivity.this, "Calling: " + contactName, Toast.LENGTH_SHORT).show();
+        });
+    }
+}
+
+
+
+
+
+
+==============================================
+APP: GridView using Array Adapter
+==============================================
+NOTE: This uses the simple ArrayAdapter, which is best for text-only grids.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Fruit Icons Grid"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp"/>
+
+    <GridView
+        android:id="@+id/simple_grid_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:columnWidth="90dp"
+        android:numColumns="auto_fit"
+        android:verticalSpacing="10dp"
+        android:horizontalSpacing="10dp"
+        android:gravity="center"
+        android:stretchMode="columnWidth" />
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.gridviewarrayadapter;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.widget.ArrayAdapter;
+import android.widget.GridView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        GridView gridView = findViewById(R.id.simple_grid_view);
+
+        // 1. Define the data source
+        String[] fruits = new String[] {
+            "Apple", "Banana", "Cherry", "Date", "Grape", 
+            "Kiwi", "Lemon", "Mango", "Orange", "Peach"
+        };
+
+        // 2. Create the ArrayAdapter
+        // Using the same simple text item layout as the ListView
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+            this,
+            android.R.layout.simple_list_item_1, 
+            fruits
+        );
+
+        // 3. Set the adapter
+        gridView.setAdapter(adapter);
+        
+        // 4. Handle item clicks (optional)
+        gridView.setOnItemClickListener((parent, view, position, id) -> {
+            String fruitName = (String) parent.getItemAtPosition(position);
+            Toast.makeText(MainActivity.this, "Selected: " + fruitName, Toast.LENGTH_SHORT).show();
+        });
+    }
+}
+
+
+
+
+
+==============================================
+APP: Custom GridView using Base Adapter
+==============================================
+NOTE: 
+1. Create a custom layout file: 'res/layout/grid_item.xml'.
+2. Create a data Model class: 'GridItem.java'.
+3. Create a custom Adapter class: 'CustomGridAdapter.java'.
+4. Place sample images in 'res/drawable/' (e.g., 'img_android', 'img_apple', etc.).
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <GridView
+        android:id="@+id/custom_grid_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:numColumns="2"
+        android:verticalSpacing="10dp"
+        android:horizontalSpacing="10dp"
+        android:gravity="center" />
+
+</LinearLayout>
+
+--- UI (res/layout/grid_item.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="10dp">
+
+    <ImageView
+        android:id="@+id/grid_image"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:scaleType="centerCrop"
+        android:src="@mipmap/ic_launcher"/> 
+
+    <TextView
+        android:id="@+id/grid_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Item Name"
+        android:textSize="16sp"
+        android:layout_marginTop="5dp"/>
+
+</LinearLayout>
+
+--- Data Model (GridItem.java) ---
+
+package com.example.customgridview;
+
+public class GridItem {
+    private String name;
+    private int imageResourceId;
+
+    public GridItem(String name, int imageResourceId) {
+        this.name = name;
+        this.imageResourceId = imageResourceId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public int getImageResourceId() {
+        return imageResourceId;
+    }
+}
+
+--- Custom Adapter (CustomGridAdapter.java) ---
+
+package com.example.customgridview;
+
+import android.content.Context;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
+import java.util.List;
+
+public class CustomGridAdapter extends BaseAdapter {
+    private Context context;
+    private List<GridItem> items;
+    private LayoutInflater inflater;
+
+    public CustomGridAdapter(Context context, List<GridItem> items) {
+        this.context = context;
+        this.items = items;
+        this.inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+    }
+
+    @Override
+    public int getCount() {
+        return items.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return items.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        if (convertView == null) {
+            // Inflate the custom grid_item.xml layout
+            convertView = inflater.inflate(R.layout.grid_item, parent, false);
+        }
+
+        ImageView imageView = convertView.findViewById(R.id.grid_image);
+        TextView textView = convertView.findViewById(R.id.grid_text);
+
+        GridItem currentItem = items.get(position);
+
+        // Populate the views with data from the model
+        imageView.setImageResource(currentItem.getImageResourceId());
+        textView.setText(currentItem.getName());
+
+        return convertView;
+    }
+}
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.customgridview;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.widget.GridView;
+import android.widget.Toast;
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        GridView gridView = findViewById(R.id.custom_grid_view);
+
+        // 1. Prepare the data list
+        List<GridItem> gridItems = new ArrayList<>();
+        // NOTE: Replace R.drawable.img_x with actual image resource IDs
+        gridItems.add(new GridItem("Android", R.drawable.img_android)); 
+        gridItems.add(new GridItem("Apple", R.drawable.img_apple));
+        gridItems.add(new GridItem("Chrome", R.drawable.img_chrome));
+        gridItems.add(new GridItem("Cloud", R.drawable.img_cloud));
+        gridItems.add(new GridItem("Gamepad", R.drawable.img_gamepad));
+        gridItems.add(new GridItem("Settings", R.drawable.img_settings));
+        
+
+        // 2. Create the Custom Adapter
+        CustomGridAdapter adapter = new CustomGridAdapter(this, gridItems);
+
+        // 3. Set the adapter
+        gridView.setAdapter(adapter);
+
+        // 4. Handle item clicks
+        gridView.setOnItemClickListener((parent, view, position, id) -> {
+            GridItem selectedItem = (GridItem) parent.getItemAtPosition(position);
+            Toast.makeText(MainActivity.this, "Selected: " + selectedItem.getName(), Toast.LENGTH_SHORT).show();
+        });
+    }
+}
+
+
+
+
+
+
+==============================================
+APP: Expense Tracker (SQLite CRUD)
+==============================================
+NOTE: 
+1. Create a data Model class: 'Expense.java'.
+2. Create the Database Helper class: 'DatabaseHelper.java'.
+3. This is a simplified version and only demonstrates the 'Add' (Create) and 'Display' (Read) operations.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- Data Model (Expense.java) ---
+
+package com.example.expensetracker;
+
+public class Expense {
+    private int id;
+    private String description;
+    private double amount;
+
+    public Expense(int id, String description, double amount) {
+        this.id = id;
+        this.description = description;
+        this.amount = amount;
+    }
+    
+    // Constructor for new expenses (ID auto-generated by DB)
+    public Expense(String description, double amount) {
+        this.description = description;
+        this.amount = amount;
+    }
+
+    // Getters and Setters...
+    public int getId() { return id; }
+    public String getDescription() { return description; }
+    public double getAmount() { return amount; }
+
+    // Override toString for easy display in ListView
+    @Override
+    public String toString() {
+        return description + " (₹" + String.format("%.2f", amount) + ")";
+    }
+}
+
+--- Database Helper (DatabaseHelper.java) ---
+
+package com.example.expensetracker;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DatabaseHelper extends SQLiteOpenHelper {
+
+    // Database constants
+    private static final String DATABASE_NAME = "expenses.db";
+    private static final int DATABASE_VERSION = 1;
+    
+    // Table and column names
+    public static final String TABLE_EXPENSES = "expenses_table";
+    public static final String COLUMN_ID = "ID";
+    public static final String COLUMN_DESCRIPTION = "DESCRIPTION";
+    public static final String COLUMN_AMOUNT = "AMOUNT";
+
+    // SQL statement for creating the database table
+    private static final String CREATE_TABLE_EXPENSES = 
+        "CREATE TABLE " + TABLE_EXPENSES + " (" +
+        COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+        COLUMN_DESCRIPTION + " TEXT, " +
+        COLUMN_AMOUNT + " REAL)";
+
+    public DatabaseHelper(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL(CREATE_TABLE_EXPENSES);
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_EXPENSES);
+        onCreate(db);
+    }
+
+    // --- C (Create) Operation ---
+    public boolean addExpense(Expense expense) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        
+        cv.put(COLUMN_DESCRIPTION, expense.getDescription());
+        cv.put(COLUMN_AMOUNT, expense.getAmount());
+        
+        long insert = db.insert(TABLE_EXPENSES, null, cv);
+        db.close();
+        return insert != -1; // returns true if insert was successful
+    }
+
+    // --- R (Read) Operation: Get All Expenses ---
+    public List<Expense> getAllExpenses() {
+        List<Expense> expenseList = new ArrayList<>();
+        String queryString = "SELECT * FROM " + TABLE_EXPENSES;
+        
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(queryString, null);
+
+        if (cursor.moveToFirst()) {
+            do {
+                int id = cursor.getInt(0);
+                String description = cursor.getString(1);
+                double amount = cursor.getDouble(2);
+                
+                Expense newExpense = new Expense(id, description, amount);
+                expenseList.add(newExpense);
+            } while (cursor.moveToNext());
+        }
+        
+        cursor.close();
+        db.close();
+        return expenseList;
+    }
+    
+    // --- R (Read) Operation: Calculate Total ---
+    public double getTotalExpenses() {
+        double total = 0.0;
+        String queryString = "SELECT SUM(" + COLUMN_AMOUNT + ") FROM " + TABLE_EXPENSES;
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(queryString, null);
+        
+        if (cursor.moveToFirst() && !cursor.isNull(0)) {
+            total = cursor.getDouble(0);
+        }
+        
+        cursor.close();
+        db.close();
+        return total;
+    }
+}
+
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add New Expense"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <EditText
+        android:id="@+id/et_description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Description (e.g., Coffee, Petrol)" />
+
+    <EditText
+        android:id="@+id/et_amount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Amount (e.g., 50.75)"
+        android:inputType="numberDecimal"
+        android:layout_marginBottom="10dp"/>
+
+    <Button
+        android:id="@+id/btn_add_expense"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Add Expense"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Expense List"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+        
+    <TextView
+        android:id="@+id/tv_total"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Total: ₹0.00"
+        android:textSize="18sp"
+        android:textColor="@android:color/holo_red_dark"
+        android:layout_marginBottom="10dp"/>
+
+    <ListView
+        android:id="@+id/expense_list_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.expensetracker;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+    private EditText etDescription, etAmount;
+    private Button btnAddExpense;
+    private ListView expenseListView;
+    private TextView tvTotal;
+    private DatabaseHelper dbHelper;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        etDescription = findViewById(R.id.et_description);
+        etAmount = findViewById(R.id.et_amount);
+        btnAddExpense = findViewById(R.id.btn_add_expense);
+        expenseListView = findViewById(R.id.expense_list_view);
+        tvTotal = findViewById(R.id.tv_total);
+        
+        dbHelper = new DatabaseHelper(this);
+
+        btnAddExpense.setOnClickListener(v -> addExpenseEntry());
+        
+        // Initial display of the data
+        showExpensesOnListView();
+    }
+
+    private void addExpenseEntry() {
+        String description = etDescription.getText().toString();
+        String amountStr = etAmount.getText().toString();
+
+        if (description.isEmpty() || amountStr.isEmpty()) {
+            Toast.makeText(this, "Please enter both description and amount.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            double amount = Double.parseDouble(amountStr);
+            Expense newExpense = new Expense(description, amount);
+            
+            // Call the database helper to add the entry
+            boolean success = dbHelper.addExpense(newExpense);
+            
+            if (success) {
+                Toast.makeText(this, "Expense added successfully!", Toast.LENGTH_SHORT).show();
+                etDescription.setText(""); // Clear fields
+                etAmount.setText("");
+                showExpensesOnListView(); // Refresh the list
+            } else {
+                Toast.makeText(this, "Failed to add expense.", Toast.LENGTH_SHORT).show();
+            }
+
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid amount entered.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void showExpensesOnListView() {
+        // Read all expenses from the database
+        List<Expense> allExpenses = dbHelper.getAllExpenses();
+        
+        // Calculate and display the total
+        double total = dbHelper.getTotalExpenses();
+        tvTotal.setText("Total: ₹" + String.format("%.2f", total));
+
+        // Create an adapter to display the list of Expense objects (using Expense's toString())
+        ArrayAdapter<Expense> adapter = new ArrayAdapter<>(
+            this,
+            android.R.layout.simple_list_item_1,
+            allExpenses
+        );
+
+        expenseListView.setAdapter(adapter);
+    }
+}
+
+
+
+
+

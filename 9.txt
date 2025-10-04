@@ -1,0 +1,467 @@
+==============================================
+APP: Change Background Color on Shake (Accelerometer)
+==============================================
+NOTE: 
+1. Requires implementing SensorEventListener.
+2. The logic for 'shake' is a calculation based on acceleration delta.
+
+--- AndroidManifest.xml (Modifications) ---
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#CCCCCC">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="Shake the Device to Change Color!"
+        android:textSize="22sp"
+        android:padding="20dp"
+        android:textAlignment="center"/>
+
+</RelativeLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.shakecolorapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Context;
+import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Bundle;
+import android.widget.RelativeLayout;
+import android.widget.Toast;
+import java.util.Random;
+
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
+
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private RelativeLayout mainLayout;
+
+    // Shake detection parameters
+    private static final float SHAKE_THRESHOLD = 15f; // Gs
+    private static final int SHAKE_SLOP_TIME_MS = 500;
+    private long lastShakeTime = 0;
+    private float lastX, lastY, lastZ;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        
+        mainLayout = findViewById(R.id.main_layout);
+        
+        // 1. Get SensorManager service
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        
+        // 2. Get the Accelerometer sensor
+        if (sensorManager != null) {
+            accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            if (accelerometer == null) {
+                Toast.makeText(this, "Accelerometer not available.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // 3. Register the listener when activity is active
+        if (accelerometer != null) {
+            sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        // 4. Unregister the listener to save battery
+        if (accelerometer != null) {
+            sensorManager.unregisterListener(this);
+        }
+    }
+
+    // Called when sensor readings change
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            long currentTime = System.currentTimeMillis();
+            
+            // Limit shake detection frequency
+            if ((currentTime - lastShakeTime) > SHAKE_SLOP_TIME_MS) {
+                float x = event.values[0];
+                float y = event.values[1];
+                float z = event.values[2];
+                
+                // Calculate the acceleration force difference (delta)
+                float deltaX = x - lastX;
+                float deltaY = y - lastY;
+                float deltaZ = z - lastZ;
+
+                // Calculate the magnitude of the force vector
+                double speed = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ) / SensorManager.GRAVITY_EARTH;
+
+                if (speed > SHAKE_THRESHOLD) {
+                    lastShakeTime = currentTime;
+                    changeBackgroundColor();
+                }
+
+                lastX = x;
+                lastY = y;
+                lastZ = z;
+            }
+        }
+    }
+
+    // Called when the sensor's accuracy changes (usually ignored)
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Not used here
+    }
+
+    private void changeBackgroundColor() {
+        Random random = new Random();
+        int color = Color.rgb(random.nextInt(256), random.nextInt(256), random.nextInt(256));
+        mainLayout.setBackgroundColor(color);
+        Toast.makeText(this, "SHAKE DETECTED! Color Changed.", Toast.LENGTH_SHORT).show();
+    }
+}
+
+
+
+
+==============================================
+APP: Display Current Location (Latitude and Longitude)
+==============================================
+NOTE: 
+1. You MUST add the Google Play Services location dependency in build.gradle (app).
+2. Requires runtime location permissions (ACCESS_FINE_LOCATION, etc.).
+
+--- build.gradle (app-level) Modification ---
+dependencies {
+    // ... other dependencies ...
+    implementation 'com.google.android.gms:play-services-location:21.0.1' // Or latest version
+}
+
+--- AndroidManifest.xml (Modifications) ---
+
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Current GPS Location"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/tv_latitude"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Latitude: N/A"
+        android:textSize="18sp"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tv_longitude"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Longitude: N/A"
+        android:textSize="18sp"
+        android:layout_marginBottom="30dp"/>
+
+    <Button
+        android:id="@+id/btn_get_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Get My Location"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.currentlocationapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 100;
+    private FusedLocationProviderClient fusedLocationClient;
+    private TextView tvLatitude, tvLongitude;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        tvLatitude = findViewById(R.id.tv_latitude);
+        tvLongitude = findViewById(R.id.tv_longitude);
+        Button btnGetLocation = findViewById(R.id.btn_get_location);
+        
+        // Initialize the FusedLocationProviderClient
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        btnGetLocation.setOnClickListener(v -> checkLocationPermission());
+    }
+
+    private void checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // Request permission
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            // Permission already granted
+            getLocation();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                getLocation();
+            } else {
+                Toast.makeText(this, "Location permission is required to get coordinates.", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    private void getLocation() throws SecurityException {
+        // Use getLastLocation for quick, battery-efficient location retrieval
+        fusedLocationClient.getLastLocation()
+            .addOnSuccessListener(this, location -> {
+                if (location != null) {
+                    // Location found, update UI
+                    tvLatitude.setText("Latitude: " + location.getLatitude());
+                    tvLongitude.setText("Longitude: " + location.getLongitude());
+                    Toast.makeText(MainActivity.this, "Location Updated!", Toast.LENGTH_SHORT).show();
+                } else {
+                    tvLatitude.setText("Latitude: N/A");
+                    tvLongitude.setText("Longitude: N/A");
+                    Toast.makeText(MainActivity.this, "Last known location unavailable. Try again later.", Toast.LENGTH_LONG).show();
+                }
+            })
+            .addOnFailureListener(e -> {
+                Toast.makeText(MainActivity.this, "Error getting location: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            });
+    }
+}
+
+
+
+
+
+
+
+==============================================
+APP: Change Text Color on Button Click
+==============================================
+
+--- AndroidManifest.xml (Modifications) ---
+
+<!-- No special permissions or components required -->
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tv_dynamic_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click the button below to change my color!"
+        android:textSize="24sp"
+        android:textColor="@android:color/black"
+        android:layout_marginBottom="30dp"/>
+
+    <Button
+        android:id="@+id/btn_change_color"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Change Color"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.colortoggleapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.TextView;
+import java.util.Random;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView dynamicTextView;
+    private int[] colors = {Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA, Color.CYAN, Color.YELLOW, Color.DKGRAY};
+    private Random random = new Random();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        dynamicTextView = findViewById(R.id.tv_dynamic_text);
+        Button changeColorButton = findViewById(R.id.btn_change_color);
+
+        changeColorButton.setOnClickListener(v -> changeTextColor());
+    }
+
+    private void changeTextColor() {
+        // Select a random color from the predefined array
+        int newColor = colors[random.nextInt(colors.length)];
+        
+        // Update the TextView's color
+        dynamicTextView.setTextColor(newColor);
+    }
+}
+
+
+
+
+
+
+==============================================
+APP: Display Name and Email ID
+==============================================
+
+--- AndroidManifest.xml (Modifications) ---
+
+<!-- No special permissions or components required -->
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="40dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="My Contact Information"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:textColor="@android:color/holo_blue_dark"
+        android:layout_marginBottom="50dp"/>
+
+    <TextView
+        android:id="@+id/tv_name_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Name:"
+        android:textSize="18sp"
+        android:textStyle="italic"/>
+        
+    <TextView
+        android:id="@+id/tv_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="John Doe"
+        android:textSize="22sp"
+        android:layout_marginBottom="20dp"
+        android:paddingStart="10dp"/>
+
+    <TextView
+        android:id="@+id/tv_email_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Email ID:"
+        android:textSize="18sp"
+        android:textStyle="italic"/>
+
+    <TextView
+        android:id="@+id/tv_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="john.doe@example.com"
+        android:textSize="22sp"
+        android:paddingStart="10dp"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.contactinfoapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Note: Since the text is static, no dynamic logic is needed in Java, 
+        // but the TextViews are initialized for completeness.
+        // TextView tvName = findViewById(R.id.tv_name);
+        // TextView tvEmail = findViewById(R.id.tv_email);
+    }
+}

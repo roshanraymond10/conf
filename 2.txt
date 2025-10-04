@@ -1,0 +1,435 @@
+==============================================
+APP: Play Local Audio and Video
+==============================================
+NOTE: 
+1. Create a folder named 'raw' inside 'res/'.
+2. Place an audio file (e.g., 'song.mp3') and a video file (e.g., 'clip.mp4') inside 'res/raw/'.
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_horizontal"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <VideoView
+        android:id="@+id/video_player"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btn_play_music"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Play Music"
+        android:layout_marginBottom="10dp"/>
+
+    <Button
+        android:id="@+id/btn_play_video"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Play Video"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.playmediaapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.media.MediaPlayer;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.MediaController;
+import android.widget.Toast;
+import android.widget.VideoView;
+
+public class MainActivity extends AppCompatActivity {
+
+    private MediaPlayer mediaPlayer;
+    private VideoView videoView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        Button btnPlayMusic = findViewById(R.id.btn_play_music);
+        Button btnPlayVideo = findViewById(R.id.btn_play_video);
+        videoView = findViewById(R.id.video_player);
+
+        // 1. Setup Audio Player
+        mediaPlayer = MediaPlayer.create(this, R.raw.song); // Assumes 'song.mp3' in res/raw
+
+        btnPlayMusic.setOnClickListener(v -> {
+            if (!mediaPlayer.isPlaying()) {
+                mediaPlayer.start();
+                Toast.makeText(this, "Music playing", Toast.LENGTH_SHORT).show();
+            } else {
+                mediaPlayer.pause();
+                Toast.makeText(this, "Music paused", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        // 2. Setup Video Player
+        Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.clip); // Assumes 'clip.mp4' in res/raw
+        videoView.setVideoURI(videoUri);
+        
+        // Add controls for the video
+        MediaController mediaController = new MediaController(this);
+        videoView.setMediaController(mediaController);
+        mediaController.setAnchorView(videoView);
+
+        btnPlayVideo.setOnClickListener(v -> {
+            videoView.start();
+        });
+    }
+
+    // Clean up media resources when the activity is destroyed
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mediaPlayer != null) {
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+    }
+}
+
+
+
+
+
+
+==============================================
+APP: Play Video from the Internet
+==============================================
+NOTE: 
+1. ADD PERMISSION in AndroidManifest.xml: <uses-permission android:name="android.permission.INTERNET"/>
+2. Use an HTTPS link to an MP4 file. The example link is a placeholder.
+
+--- AndroidManifest.xml (Required Permission) ---
+<uses-permission android:name="android.permission.INTERNET"/>
+<application>...</application>
+
+
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <uses-permission android:name="android.permission.INTERNET"/>
+    
+    <application ...>
+        <activity android:name=".MainActivity" ...>
+            ...
+        </activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Streaming Video from URL"
+        android:textSize="20sp"
+        android:layout_marginBottom="10dp"/>
+
+    <VideoView
+        android:id="@+id/internet_video_player"
+        android:layout_width="match_parent"
+        android:layout_height="300dp"/>
+
+    <Button
+        android:id="@+id/btn_start_stream"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start Stream"
+        android:layout_marginTop="20dp"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.streamvideoapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.net.Uri;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.MediaController;
+import android.widget.Toast;
+import android.widget.VideoView;
+
+public class MainActivity extends AppCompatActivity {
+
+    private VideoView videoView;
+    // REPLACE THIS WITH A VALID, DIRECT LINK TO AN MP4 FILE
+    private static final String VIDEO_URL = "https://www.yourdomain.com/sample_video.mp4"; 
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        videoView = findViewById(R.id.internet_video_player);
+        Button btnStartStream = findViewById(R.id.btn_start_stream);
+
+        // 1. Setup VideoView
+        Uri videoUri = Uri.parse(VIDEO_URL);
+        videoView.setVideoURI(videoUri);
+
+        // 2. Add Media Controls
+        MediaController mediaController = new MediaController(this);
+        videoView.setMediaController(mediaController);
+        mediaController.setAnchorView(videoView);
+
+        // 3. Set up listeners
+        videoView.setOnPreparedListener(mp -> {
+            Toast.makeText(MainActivity.this, "Video is ready to play.", Toast.LENGTH_SHORT).show();
+            // Optional: Start automatically
+            // videoView.start();
+        });
+
+        videoView.setOnErrorListener((mp, what, extra) -> {
+            Toast.makeText(MainActivity.this, "Error playing video: " + what, Toast.LENGTH_LONG).show();
+            return true; // Indicates we handled the error
+        });
+        
+        btnStartStream.setOnClickListener(v -> {
+            if (!videoView.isPlaying()) {
+                videoView.start();
+            }
+        });
+    }
+}
+
+
+
+
+==============================================
+APP: Demonstrate Options Menu
+==============================================
+NOTE: 
+1. Create a new folder: 'res/menu/'.
+2. Create the menu resource file: 'res/menu/main_options_menu.xml'.
+
+--- Menu Resource (res/menu/main_options_menu.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="Search"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_settings"
+        android:title="Settings"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_help"
+        android:title="Help"
+        app:showAsAction="never" />
+</menu>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/status_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="Select an item from the Options Menu"
+        android:textSize="18sp"/>
+
+</RelativeLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.optionsmenuapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView statusText;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        statusText = findViewById(R.id.status_text);
+    }
+
+    // 1. Inflate the menu: This method is called to create the Options Menu
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main_options_menu, menu);
+        return true;
+    }
+
+    // 2. Handle item clicks: This method is called when a menu item is selected
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.menu_search) {
+            Toast.makeText(this, "Search Selected", Toast.LENGTH_SHORT).show();
+            statusText.setText("Action: Search");
+            return true;
+        } else if (id == R.id.menu_settings) {
+            Toast.makeText(this, "Settings Selected", Toast.LENGTH_SHORT).show();
+            statusText.setText("Action: Settings");
+            return true;
+        } else if (id == R.id.menu_help) {
+            Toast.makeText(this, "Help Selected", Toast.LENGTH_SHORT).show();
+            statusText.setText("Action: Help");
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+}
+
+
+
+
+==============================================
+APP: Context Menu (Change Background Color)
+==============================================
+NOTE: The context menu appears when you long-press the TextView.
+
+--- Menu Resource (res/menu/context_color_menu.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/color_red"
+        android:title="Change to Red" />
+    <item
+        android:id="@+id/color_green"
+        android:title="Change to Green" />
+    <item
+        android:id="@+id/color_blue"
+        android:title="Change to Blue" />
+</menu>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#CCCCCC"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/target_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:padding="20dp"
+        android:text="LONG PRESS ME to change the background color."
+        android:textSize="18sp"
+        android:background="#FFFFFF"/>
+
+</RelativeLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.contextmenuapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.graphics.Color;
+import android.os.Bundle;
+import android.view.ContextMenu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private RelativeLayout mainLayout;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        mainLayout = findViewById(R.id.main_layout);
+        TextView targetView = findViewById(R.id.target_view);
+
+        // Crucial Step 1: Register the view that will trigger the Context Menu on long-press
+        registerForContextMenu(targetView);
+    }
+
+    // Crucial Step 2: Inflate the context menu XML when long-press occurs
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        getMenuInflater().inflate(R.menu.context_color_menu, menu);
+        menu.setHeaderTitle("Choose a Color");
+    }
+
+    // Crucial Step 3: Handle the click action on the context menu item
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.color_red) {
+            mainLayout.setBackgroundColor(Color.RED);
+            Toast.makeText(this, "Background is Red", Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (id == R.id.color_green) {
+            mainLayout.setBackgroundColor(Color.GREEN);
+            Toast.makeText(this, "Background is Green", Toast.LENGTH_SHORT).show();
+            return true;
+        } else if (id == R.id.color_blue) {
+            mainLayout.setBackgroundColor(Color.BLUE);
+            Toast.makeText(this, "Background is Blue", Toast.LENGTH_SHORT).show();
+            return true;
+        }
+
+        return super.onContextItemSelected(item);
+    }
+}

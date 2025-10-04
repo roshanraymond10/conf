@@ -1,0 +1,545 @@
+==============================================
+APP: Radio Buttons and Checkboxes
+==============================================
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1. Choose your Primary Language (Radio Buttons):"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <RadioGroup
+        android:id="@+id/radio_group_language"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginBottom="20dp">
+
+        <RadioButton
+            android:id="@+id/radio_java"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Java" />
+
+        <RadioButton
+            android:id="@+id/radio_kotlin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Kotlin" />
+    </RadioGroup>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="2. Select Frameworks You Know (Checkboxes):"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <CheckBox
+        android:id="@+id/check_flutter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Flutter" />
+
+    <CheckBox
+        android:id="@+id/check_react"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="React Native" />
+
+    <CheckBox
+        android:id="@+id/check_xamarin"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Xamarin" />
+
+    <Button
+        android:id="@+id/btn_submit"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Submit Choices"
+        android:layout_marginTop="20dp"/>
+
+    <TextView
+        android:id="@+id/tv_results"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Results will appear here."
+        android:layout_marginTop="20dp"
+        android:textStyle="italic"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.radiocheckboxapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.RadioGroup;
+import android.widget.RadioButton;
+import android.widget.CheckBox;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private RadioGroup radioGroup;
+    private CheckBox checkFlutter, checkReact, checkXamarin;
+    private TextView resultsText;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Find Views
+        radioGroup = findViewById(R.id.radio_group_language);
+        checkFlutter = findViewById(R.id.check_flutter);
+        checkReact = findViewById(R.id.check_react);
+        checkXamarin = findViewById(R.id.check_xamarin);
+        Button submitButton = findViewById(R.id.btn_submit);
+        resultsText = findViewById(R.id.tv_results);
+
+        submitButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                displayChoices();
+            }
+        });
+    }
+
+    private void displayChoices() {
+        // --- 1. Get Radio Button Choice (Single Selection) ---
+        int selectedId = radioGroup.getCheckedRadioButtonId();
+        String primaryLang = "No language selected";
+
+        if (selectedId != -1) {
+            RadioButton selectedRadio = findViewById(selectedId);
+            primaryLang = selectedRadio.getText().toString();
+        }
+
+        // --- 2. Get Checkbox Choices (Multiple Selection) ---
+        StringBuilder frameworks = new StringBuilder("Frameworks: ");
+
+        if (checkFlutter.isChecked()) {
+            frameworks.append("Flutter, ");
+        }
+        if (checkReact.isChecked()) {
+            frameworks.append("React Native, ");
+        }
+        if (checkXamarin.isChecked()) {
+            frameworks.append("Xamarin, ");
+        }
+        
+        // Clean up the comma/space if any frameworks were selected
+        String frameworkString = frameworks.toString();
+        if (frameworkString.endsWith(", ")) {
+            frameworkString = frameworkString.substring(0, frameworkString.length() - 2);
+        } else if (frameworkString.equals("Frameworks: ")) {
+            frameworkString = "No frameworks selected";
+        }
+
+
+        // --- 3. Display Results ---
+        String finalResult = "Primary Language: " + primaryLang + "\n" + frameworkString;
+        resultsText.setText(finalResult);
+        Toast.makeText(this, "Choices Submitted!", Toast.LENGTH_SHORT).show();
+    }
+}
+
+
+
+
+
+
+
+==============================================
+APP: Launch New Activity on Button Click
+==============================================
+NOTE: 
+1. You must create a second Activity named 'SecondActivity.java'.
+2. The 'SecondActivity' must be declared in AndroidManifest.xml.
+
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application ...>
+        
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".SecondActivity" android:exported="false" />
+        
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/tv_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="This is the Main Activity"
+        android:textSize="24sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"/>
+
+    <Button
+        android:id="@+id/btn_launch_second"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="Launch Second Activity"/>
+
+</RelativeLayout>
+
+--- UI (activity_second.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome to the Second Activity!"
+        android:textSize="24sp"
+        android:textColor="@android:color/holo_green_dark"
+        android:layout_centerInParent="true"/>
+</RelativeLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.launchactivityapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        Button launchButton = findViewById(R.id.btn_launch_second);
+
+        launchButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Create an Explicit Intent to launch SecondActivity
+                Intent intent = new Intent(MainActivity.this, SecondActivity.class);
+                
+                // Start the new activity
+                startActivity(intent);
+            }
+        });
+    }
+}
+
+--- Functionality (SecondActivity.java) ---
+
+package com.example.launchactivityapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+
+public class SecondActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_second);
+        // Nothing special to do here, just display the layout.
+    }
+}
+
+
+
+
+==============================================
+APP: Pass Integers and Display Sum
+==============================================
+NOTE: 
+1. You must create a second Activity named 'ResultActivity.java'.
+2. The 'ResultActivity' must be declared in AndroidManifest.xml.
+
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application ...>
+        
+        <activity android:name=".MainActivity" android:exported="true">
+             <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".ResultActivity" android:exported="false" />
+        
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp"
+    tools:context=".MainActivity">
+
+    <EditText
+        android:id="@+id/et_num1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter first integer"
+        android:inputType="number"
+        android:layout_marginBottom="10dp"/>
+
+    <EditText
+        android:id="@+id/et_num2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter second integer"
+        android:inputType="number"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btn_calculate"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Calculate Sum"/>
+
+</LinearLayout>
+
+--- UI (activity_result.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="The Sum is:"
+        android:textSize="28sp"
+        android:layout_marginBottom="10dp"/>
+
+    <TextView
+        android:id="@+id/tv_result"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0"
+        android:textSize="48sp"
+        android:textColor="@android:color/holo_red_dark"
+        android:textStyle="bold"/>
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.sumapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    public static final String EXTRA_SUM = "com.example.sumapp.SUM"; // Key for the Intent Extra
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        final EditText etNum1 = findViewById(R.id.et_num1);
+        final EditText etNum2 = findViewById(R.id.et_num2);
+        Button btnCalculate = findViewById(R.id.btn_calculate);
+
+        btnCalculate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Get user input as strings
+                String strNum1 = etNum1.getText().toString();
+                String strNum2 = etNum2.getText().toString();
+                
+                if (strNum1.isEmpty() || strNum2.isEmpty()) {
+                    Toast.makeText(MainActivity.this, "Please enter both numbers", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                try {
+                    // Convert to integers and calculate sum
+                    int num1 = Integer.parseInt(strNum1);
+                    int num2 = Integer.parseInt(strNum2);
+                    int sum = num1 + num2;
+
+                    // Create Intent to launch ResultActivity
+                    Intent intent = new Intent(MainActivity.this, ResultActivity.class);
+                    
+                    // Add the calculated sum as an Extra
+                    intent.putExtra(EXTRA_SUM, sum); 
+                    
+                    // Start the new activity
+                    startActivity(intent);
+                } catch (NumberFormatException e) {
+                    Toast.makeText(MainActivity.this, "Invalid number format", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+    }
+}
+
+--- Functionality (ResultActivity.java) ---
+
+package com.example.sumapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.TextView;
+
+public class ResultActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_result);
+
+        TextView tvResult = findViewById(R.id.tv_result);
+
+        // Get the Intent that started this activity
+        Intent intent = getIntent();
+        
+        // Retrieve the integer 'Extra' using the key defined in MainActivity
+        // The '0' is the default value if the Extra is not found.
+        int sumResult = intent.getIntExtra(MainActivity.EXTRA_SUM, 0);
+
+        // Display the result
+        tvResult.setText(String.valueOf(sumResult));
+    }
+}
+
+
+
+
+==============================================
+APP: Launch Webpage from Activity
+==============================================
+NOTE: No permission required for ACTION_VIEW.
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click the button to launch Google in your web browser."
+        android:textSize="18sp"
+        android:textAlignment="center"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btn_launch_web"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Open Webpage"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.launchwebpageapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String URL_TO_OPEN = "https://www.google.com";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        Button launchButton = findViewById(R.id.btn_launch_web);
+
+        launchButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // 1. Create a URI object from the URL string
+                Uri webpage = Uri.parse(URL_TO_OPEN);
+                
+                // 2. Create an Implicit Intent
+                Intent intent = new Intent(Intent.ACTION_VIEW, webpage);
+
+                // 3. Check if there is an app that can handle this Intent (e.g., a browser)
+                if (intent.resolveActivity(getPackageManager()) != null) {
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(MainActivity.this, "No browser app found to handle this request.", Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+    }
+}

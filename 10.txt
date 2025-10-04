@@ -1,0 +1,632 @@
+==============================================
+APP: Sum and Average of Three Subjects
+==============================================
+
+--- AndroidManifest.xml (Modifications) ---
+
+<!-- No special permissions or components required -->
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter Marks (Max 100 per Subject)"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="15dp"/>
+
+    <EditText
+        android:id="@+id/et_sub1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Subject 1 Marks"
+        android:inputType="numberDecimal"
+        android:maxLength="5"/>
+
+    <EditText
+        android:id="@+id/et_sub2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Subject 2 Marks"
+        android:inputType="numberDecimal"
+        android:maxLength="5"/>
+
+    <EditText
+        android:id="@+id/et_sub3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Subject 3 Marks"
+        android:inputType="numberDecimal"
+        android:maxLength="5"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btn_calculate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Calculate Results"
+        android:layout_marginBottom="30dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="RESULTS:"
+        android:textSize="20sp"
+        android:textStyle="italic"/>
+
+    <TextView
+        android:id="@+id/tv_sum"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Total Marks: 0.0"
+        android:textSize="18sp"
+        android:layout_marginTop="5dp"/>
+
+    <TextView
+        android:id="@+id/tv_average"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Average Marks: 0.0"
+        android:textSize="18sp"
+        android:textColor="@android:color/holo_red_dark"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.marksapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private EditText etSub1, etSub2, etSub3;
+    private TextView tvSum, tvAverage;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Initialize input fields
+        etSub1 = findViewById(R.id.et_sub1);
+        etSub2 = findViewById(R.id.et_sub2);
+        etSub3 = findViewById(R.id.et_sub3);
+        
+        // Initialize output fields
+        tvSum = findViewById(R.id.tv_sum);
+        tvAverage = findViewById(R.id.tv_average);
+        
+        Button btnCalculate = findViewById(R.id.btn_calculate);
+        
+        btnCalculate.setOnClickListener(v -> calculateResults());
+    }
+
+    private void calculateResults() {
+        // Read input strings
+        String strSub1 = etSub1.getText().toString();
+        String strSub2 = etSub2.getText().toString();
+        String strSub3 = etSub3.getText().toString();
+
+        if (strSub1.isEmpty() || strSub2.isEmpty() || strSub3.isEmpty()) {
+            Toast.makeText(this, "Please enter marks for all three subjects.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        try {
+            // Convert to double (allowing for decimal marks)
+            double sub1 = Double.parseDouble(strSub1);
+            double sub2 = Double.parseDouble(strSub2);
+            double sub3 = Double.parseDouble(strSub3);
+            
+            // Validate marks (optional, but good practice)
+            if (sub1 < 0 || sub2 < 0 || sub3 < 0) {
+                 Toast.makeText(this, "Marks cannot be negative.", Toast.LENGTH_SHORT).show();
+                 return;
+            }
+
+            // Calculate Sum
+            double sum = sub1 + sub2 + sub3;
+            
+            // Calculate Average (divided by 3 subjects)
+            double average = sum / 3.0;
+
+            // Display results, formatted to two decimal places
+            tvSum.setText(String.format("Total Marks: %.2f", sum));
+            tvAverage.setText(String.format("Average Marks: %.2f", average));
+
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid mark entered. Please use numbers.", Toast.LENGTH_LONG).show();
+        }
+    }
+}
+
+
+
+
+
+
+==============================================
+APP: Design Different Layouts Demonstration
+==============================================
+NOTE: Demonstrates LinearLayout, RelativeLayout, and FrameLayout usage within a ConstraintLayout.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<!-- No special permissions or components required -->
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <!-- 1. LinearLayout Demo (Stretches across top half) -->
+    <LinearLayout
+        android:id="@+id/linear_layout_section"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#E0F7FA"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintBottom_toTopOf="@+id/guideline"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="L I N E A R"
+            android:textStyle="bold"
+            android:textColor="#006064"
+            android:padding="8dp"/>
+        
+        <View android:layout_width="2dp" android:layout_height="match_parent" android:background="#006064" android:layout_margin="10dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="H O R I Z O N T A L"
+            android:textColor="#006064"
+            android:padding="8dp"/>
+
+    </LinearLayout>
+
+    <!-- Horizontal Guideline separating top and bottom halves -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.5" />
+
+    <!-- 2. RelativeLayout Demo (Bottom Left Quadrant) -->
+    <RelativeLayout
+        android:id="@+id/relative_layout_section"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#FFF3E0"
+        android:padding="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/vertical_guideline"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/guideline">
+
+        <TextView
+            android:id="@+id/tv_relative_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Relative Layout"
+            android:textStyle="bold"
+            android:textColor="#FF6F00"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"/>
+
+        <Button
+            android:id="@+id/btn_center"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Centered"
+            android:layout_centerInParent="true"/>
+
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bottom Right"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"/>
+
+    </RelativeLayout>
+
+    <!-- Vertical Guideline separating bottom quadrants -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/vertical_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.5" />
+        
+    <!-- 3. FrameLayout Demo (Bottom Right Quadrant - for stacking) -->
+    <FrameLayout
+        android:id="@+id/frame_layout_section"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#E8F5E9"
+        android:padding="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@+id/vertical_guideline"
+        app:layout_constraintTop_toTopOf="@+id/guideline">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Frame Layout"
+            android:textStyle="bold"
+            android:textColor="#388E3C"
+            android:layout_gravity="top|center_horizontal"/>
+            
+        <!-- Items in FrameLayout are stacked, last one on top -->
+        <View
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="#66BB6A"
+            android:layout_gravity="center"/> 
+        
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Overlay Text"
+            android:textColor="@android:color/white"
+            android:layout_gravity="center"/> 
+
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.layoutdemo;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+
+public class MainActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        
+        // No dynamic Java logic is required; this app is purely for layout demonstration.
+    }
+}
+
+
+
+
+
+
+
+==============================================
+APP: Simple Calculator App
+==============================================
+NOTE: Handles +, -, *, / operations and basic input display.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<!-- No special permissions or components required -->
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity" android:exported="true">...</activity>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp"
+    android:gravity="center_horizontal"
+    android:background="#f5f5f5">
+
+    <!-- Display -->
+    <TextView
+        android:id="@+id/tv_display"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#000000"
+        android:gravity="bottom|end"
+        android:padding="16dp"
+        android:text="0"
+        android:textColor="@android:color/white"
+        android:textSize="56sp"
+        android:maxLines="1"
+        android:ellipsize="start"/>
+
+    <!-- Button Grid Layout -->
+    <GridLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:columnCount="4"
+        android:rowCount="5"
+        android:layout_marginTop="10dp">
+        
+        <!-- Row 1: Clear, Toggle Sign, Percentage, Divide -->
+        <Button style="@style/CalculatorButton.Function" android:text="C" android:id="@+id/btn_clear" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Function" android:text="+/-" android:id="@+id/btn_toggle_sign" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Function" android:text="%" android:id="@+id/btn_percent" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Operator" android:text="/" android:id="@+id/btn_divide" android:layout_columnWeight="1"/>
+        
+        <!-- Row 2: 7, 8, 9, Multiply -->
+        <Button style="@style/CalculatorButton.Number" android:text="7" android:id="@+id/btn_7" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Number" android:text="8" android:id="@+id/btn_8" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Number" android:text="9" android:id="@+id/btn_9" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Operator" android:text="*" android:id="@+id/btn_multiply" android:layout_columnWeight="1"/>
+        
+        <!-- Row 3: 4, 5, 6, Subtract -->
+        <Button style="@style/CalculatorButton.Number" android:text="4" android:id="@+id/btn_4" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Number" android:text="5" android:id="@+id/btn_5" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Number" android:text="6" android:id="@+id/btn_6" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Operator" android:text="-" android:id="@+id/btn_subtract" android:layout_columnWeight="1"/>
+        
+        <!-- Row 4: 1, 2, 3, Add -->
+        <Button style="@style/CalculatorButton.Number" android:text="1" android:id="@+id/btn_1" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Number" android:text="2" android:id="@+id/btn_2" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Number" android:text="3" android:id="@+id/btn_3" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Operator" android:text="+" android:id="@+id/btn_add" android:layout_columnWeight="1"/>
+
+        <!-- Row 5: 0, Decimal, Equals -->
+        <Button style="@style/CalculatorButton.Number" android:text="0" android:id="@+id/btn_0" android:layout_columnSpan="2" android:layout_columnWeight="2"/>
+        <Button style="@style/CalculatorButton.Number" android:text="." android:id="@+id/btn_decimal" android:layout_columnWeight="1"/>
+        <Button style="@style/CalculatorButton.Equals" android:text="=" android:id="@+id/btn_equals" android:layout_columnWeight="1"/>
+    </GridLayout>
+
+</LinearLayout>
+
+<!-- You would define these styles in res/values/styles.xml -->
+<!-- Example styles.xml content:
+<resources>
+    <style name="CalculatorButton" parent="Widget.AppCompat.Button">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">90dp</item>
+        <item name="android:textSize">28sp</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:backgroundTint">#E0E0E0</item>
+        <item name="android:textColor">#212121</item>
+    </style>
+    <style name="CalculatorButton.Number" parent="CalculatorButton">
+        <item name="android:backgroundTint">#FFFFFF</item>
+    </style>
+    <style name="CalculatorButton.Operator" parent="CalculatorButton">
+        <item name="android:backgroundTint">#FF9800</item>
+        <item name="android:textColor">#FFFFFF</item>
+    </style>
+    <style name="CalculatorButton.Function" parent="CalculatorButton">
+        <item name="android:backgroundTint">#BDBDBD</item>
+    </style>
+    <style name="CalculatorButton.Equals" parent="CalculatorButton.Operator">
+        <item name="android:backgroundTint">#4CAF50</item>
+    </style>
+</resources>
+-->
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.calculatorapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private TextView display;
+    private double currentValue = 0;
+    private String currentOperator = "";
+    private boolean waitingForNewNumber = true;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        display = findViewById(R.id.tv_display);
+
+        // Setup listeners for all buttons
+        setupNumberButtons();
+        setupOperatorButtons();
+        setupFunctionButtons();
+    }
+    
+    // Attaches listeners to digits (0-9) and decimal point
+    private void setupNumberButtons() {
+        int[] numberButtonIds = {R.id.btn_0, R.id.btn_1, R.id.btn_2, R.id.btn_3, R.id.btn_4, R.id.btn_5, R.id.btn_6, R.id.btn_7, R.id.btn_8, R.id.btn_9, R.id.btn_decimal};
+        
+        View.OnClickListener numberListener = v -> {
+            Button b = (Button) v;
+            String buttonText = b.getText().toString();
+            
+            if (waitingForNewNumber) {
+                // If starting a new number or after equals
+                display.setText(buttonText.equals(".") ? "0." : buttonText);
+                waitingForNewNumber = false;
+            } else if (buttonText.equals(".")) {
+                // Prevent multiple decimals
+                if (!display.getText().toString().contains(".")) {
+                    display.append(".");
+                }
+            } else {
+                // Append digits
+                if (display.getText().toString().equals("0")) {
+                    display.setText(buttonText);
+                } else {
+                    display.append(buttonText);
+                }
+            }
+        };
+
+        for (int id : numberButtonIds) {
+            findViewById(id).setOnClickListener(numberListener);
+        }
+    }
+    
+    // Attaches listeners to +, -, *, /
+    private void setupOperatorButtons() {
+        int[] operatorButtonIds = {R.id.btn_add, R.id.btn_subtract, R.id.btn_multiply, R.id.btn_divide};
+        
+        View.OnClickListener operatorListener = v -> {
+            Button b = (Button) v;
+            String newOperator = b.getText().toString();
+            
+            if (!waitingForNewNumber && !currentOperator.isEmpty()) {
+                // If chaining operations, calculate the pending one first
+                performCalculation();
+            } else {
+                // Load the first value
+                try {
+                    currentValue = Double.parseDouble(display.getText().toString());
+                } catch (NumberFormatException e) {
+                    currentValue = 0;
+                }
+            }
+            
+            currentOperator = newOperator;
+            waitingForNewNumber = true;
+        };
+
+        for (int id : operatorButtonIds) {
+            findViewById(id).setOnClickListener(operatorListener);
+        }
+        
+        // Equals button listener
+        findViewById(R.id.btn_equals).setOnClickListener(v -> {
+            if (!currentOperator.isEmpty()) {
+                performCalculation();
+                currentOperator = ""; // Reset operator after equals
+                waitingForNewNumber = true;
+            }
+        });
+    }
+
+    // Attaches listeners to C, +/-, %
+    private void setupFunctionButtons() {
+        // Clear (C) button
+        findViewById(R.id.btn_clear).setOnClickListener(v -> {
+            display.setText("0");
+            currentValue = 0;
+            currentOperator = "";
+            waitingForNewNumber = true;
+        });
+        
+        // Toggle Sign (+/-) button
+        findViewById(R.id.btn_toggle_sign).setOnClickListener(v -> {
+            try {
+                double val = Double.parseDouble(display.getText().toString());
+                val = -val;
+                display.setText(formatResult(val));
+            } catch (NumberFormatException e) {
+                // Ignore if invalid
+            }
+        });
+        
+        // Percentage (%) button
+        findViewById(R.id.btn_percent).setOnClickListener(v -> {
+            try {
+                double val = Double.parseDouble(display.getText().toString());
+                val = val / 100.0;
+                display.setText(formatResult(val));
+            } catch (NumberFormatException e) {
+                 // Ignore if invalid
+            }
+        });
+    }
+    
+    // Core calculation logic
+    private void performCalculation() {
+        double secondValue = 0;
+        try {
+            secondValue = Double.parseDouble(display.getText().toString());
+        } catch (NumberFormatException e) {
+            Toast.makeText(this, "Invalid number input.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        switch (currentOperator) {
+            case "+":
+                currentValue += secondValue;
+                break;
+            case "-":
+                currentValue -= secondValue;
+                break;
+            case "*":
+                currentValue *= secondValue;
+                break;
+            case "/":
+                if (secondValue != 0) {
+                    currentValue /= secondValue;
+                } else {
+                    // Handle division by zero error
+                    display.setText("Error");
+                    currentValue = 0;
+                    currentOperator = "";
+                    waitingForNewNumber = true;
+                    Toast.makeText(this, "Cannot divide by zero.", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                break;
+            default:
+                // No operator pending, just display the number
+                currentValue = secondValue;
+                break;
+        }
+
+        display.setText(formatResult(currentValue));
+        waitingForNewNumber = true;
+    }
+    
+    // Helper to format the result (remove unnecessary decimals for integers)
+    private String formatResult(double result) {
+        if (result == (long) result) {
+            return String.format("%d", (long) result);
+        } else {
+            return String.valueOf(result);
+        }
+    }
+}

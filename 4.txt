@@ -1,0 +1,458 @@
+==============================================
+APP: Broadcast a Custom Intent
+==============================================
+NOTE: 
+1. Create a new Java class named 'CustomReceiver'.
+2. The receiver MUST be registered in AndroidManifest.xml.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity">...</activity>
+        
+        <receiver android:name=".CustomReceiver"
+                  android:exported="true"> 
+            <intent-filter>
+                <action android:name="com.example.customintent.ACTION_CUSTOM_BROADCAST" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click to send a custom broadcast. A Toast will appear from the Receiver."
+        android:textAlignment="center"
+        android:textSize="18sp"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btn_send_broadcast"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Send Custom Broadcast"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.customintentbroadcast;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    // Define the custom action string
+    public static final String ACTION_CUSTOM_BROADCAST = 
+            "com.example.customintent.ACTION_CUSTOM_BROADCAST";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        Button sendButton = findViewById(R.id.btn_send_broadcast);
+
+        sendButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                sendCustomBroadcast();
+            }
+        });
+    }
+
+    private void sendCustomBroadcast() {
+        // 1. Create the Intent with the custom action string
+        Intent customIntent = new Intent(ACTION_CUSTOM_BROADCAST);
+        
+        // Optional: Add data to the intent
+        customIntent.putExtra("data_key", "Hello from MainActivity!");
+
+        // 2. Send the broadcast
+        sendBroadcast(customIntent);
+        
+        Toast.makeText(this, "Custom Broadcast Sent!", Toast.LENGTH_SHORT).show();
+    }
+}
+
+--- Functionality (CustomReceiver.java) ---
+
+package com.example.customintentbroadcast;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.widget.Toast;
+
+public class CustomReceiver extends BroadcastReceiver {
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        // Check if the received intent matches the expected action
+        if (MainActivity.ACTION_CUSTOM_BROADCAST.equals(intent.getAction())) {
+            
+            // Retrieve the optional data
+            String receivedData = intent.getStringExtra("data_key");
+            
+            // Display a Toast message from the receiver
+            Toast.makeText(context, 
+                           "Custom Broadcast Received! Data: " + receivedData, 
+                           Toast.LENGTH_LONG).show();
+        }
+    }
+}
+
+
+
+
+==============================================
+APP: Broadcast System Intent (AIRPLANE MODE)
+==============================================
+NOTE: 
+1. Create a new Java class named 'AirplaneModeReceiver'.
+2. The receiver MUST be registered in AndroidManifest.xml.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <application ...>
+        <activity android:name=".MainActivity">...</activity>
+        
+        <receiver android:name=".AirplaneModeReceiver"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.AIRPLANE_MODE" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="To test this app, manually turn AIRPLANE MODE ON and OFF on your device. The Receiver will display a Toast."
+        android:textAlignment="center"
+        android:textSize="18sp"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.systembroadcastapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+
+public class MainActivity extends AppCompatActivity {
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        // This activity simply exists to launch the app; the main logic is in the Receiver.
+    }
+}
+
+--- Functionality (AirplaneModeReceiver.java) ---
+
+package com.example.systembroadcastapp;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.provider.Settings;
+import android.widget.Toast;
+
+public class AirplaneModeReceiver extends BroadcastReceiver {
+
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        // Check if the intent action is the one we registered for
+        if (Intent.ACTION_AIRPLANE_MODE_CHANGED.equals(intent.getAction())) {
+            
+            // The system broadcast includes a boolean extra indicating the current state
+            boolean isAirplaneModeOn = intent.getBooleanExtra("state", false);
+            
+            String message;
+            if (isAirplaneModeOn) {
+                message = "AIRPLANE MODE ACTIVATED!";
+            } else {
+                message = "AIRPLANE MODE DEACTIVATED!";
+            }
+            
+            // Display the result using a Toast
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+        }
+    }
+}
+
+
+
+
+==============================================
+APP: Alarm Application
+==============================================
+NOTE: 
+1. Create a new Java class named 'AlarmReceiver'.
+2. The receiver MUST be registered in AndroidManifest.xml.
+3. Modern Android versions may require additional permissions or restrict background alarms.
+
+--- AndroidManifest.xml (Modifications) ---
+
+<manifest ...>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> 
+    <uses-permission android:name="android.permission.SET_ALARM" />
+    <application ...>
+        <activity android:name=".MainActivity">...</activity>
+        
+        <receiver android:name=".AlarmReceiver" 
+                  android:exported="false"/>
+    </application>
+</manifest>
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Set a Toast Alarm for 10 seconds from now."
+        android:textSize="18sp"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btn_set_alarm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Set Simple Alarm"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.alarmapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.widget.Button;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final int ALARM_REQUEST_CODE = 100;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        Button setAlarmButton = findViewById(R.id.btn_set_alarm);
+        setAlarmButton.setOnClickListener(v -> setSimpleAlarm());
+    }
+
+    private void setSimpleAlarm() {
+        // 1. Get the AlarmManager service
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        
+        // 2. Define the Intent to be triggered (this will start our Receiver)
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        
+        // 3. Create a PendingIntent (a wrapper around the Intent)
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this, 
+                ALARM_REQUEST_CODE, 
+                intent, 
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE // Use FLAG_IMMUTABLE for modern Android
+        );
+
+        // 4. Calculate the time to trigger the alarm (10 seconds from now)
+        long triggerTime = System.currentTimeMillis() + 10 * 1000; 
+
+        if (alarmManager != null) {
+            // 5. Set the alarm (using ELAPSED_REALTIME, but RTC_WAKEUP is better for real-time alarms)
+            // RTC_WAKEUP wakes up the device to fire the alarm.
+            alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerTime,
+                    pendingIntent
+            );
+            Toast.makeText(this, "Alarm set for 10 seconds from now!", Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(this, "Alarm service not available.", Toast.LENGTH_SHORT).show();
+        }
+    }
+}
+
+--- Functionality (AlarmReceiver.java) ---
+
+package com.example.alarmapp;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.widget.Toast;
+
+public class AlarmReceiver extends BroadcastReceiver {
+    
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        // This code executes when the alarm fires
+        Toast.makeText(context, "ALARM FIRED! Time to wake up!", Toast.LENGTH_LONG).show();
+    }
+}
+
+
+
+
+
+==============================================
+APP: Demonstrate Notification in Android
+==============================================
+NOTE: 
+1. This code includes the necessary Notification Channel creation for Android 8.0 (API 26) and higher.
+2. The user will see a notification pop up.
+
+--- AndroidManifest.xml (No extra modifications needed) ---
+(Using NotificationCompat ensures backward compatibility)
+
+--- UI (activity_main.xml) ---
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click the button to generate a system notification."
+        android:textSize="18sp"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btn_show_notification"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Show Notification"/>
+
+</LinearLayout>
+
+--- Functionality (MainActivity.java) ---
+
+package com.example.notificationdemo;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import android.os.Bundle;
+import android.widget.Button;
+
+public class MainActivity extends AppCompatActivity {
+
+    private static final String CHANNEL_ID = "MySimpleChannel";
+    private static final int NOTIFICATION_ID = 1;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Required: Create the Notification Channel first
+        createNotificationChannel(); 
+
+        Button showButton = findViewById(R.id.btn_show_notification);
+        showButton.setOnClickListener(v -> showNotification());
+    }
+
+    private void createNotificationChannel() {
+        // Only required for Android 8.0 (API 26) and higher
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = "Demo Channel";
+            String description = "Channel for simple demo notifications";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(description);
+            
+            // Register the channel with the system
+            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+            if (notificationManager != null) {
+                 notificationManager.createNotificationChannel(channel);
+            }
+        }
+    }
+
+    private void showNotification() {
+        // 1. Define the action when the user clicks the notification (e.g., open MainActivity)
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                this, 
+                0, 
+                intent, 
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE // Use FLAG_IMMUTABLE
+        );
+
+        // 2. Build the Notification content
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_dialog_info) // Must use a small icon
+                .setContentTitle("New Notification Alert!")
+                .setContentText("This is a simple Android notification demo.")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent) // Set the intent to launch when tapped
+                .setAutoCancel(true); // Remove notification when tapped
+
+        // 3. Issue the notification
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
+        notificationManager.notify(NOTIFICATION_ID, builder.build());
+    }
+}
