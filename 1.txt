@@ -1,6 +1,6 @@
-==============================================
+
 APP: Date and Time Formats (Linear Layout)
-==============================================
+
 
 --- UI (activity_main.xml) ---
 
@@ -294,4 +294,5 @@ public class MainActivity extends AppCompatActivity {
         // This is where you could dynamically change the image or properties:
         // imageView.setImageResource(R.drawable.another_image); 
     }
+
 }
