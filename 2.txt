@@ -1,6 +1,5 @@
-==============================================
+
 APP: Play Local Audio and Video
-==============================================
 NOTE: 
 1. Create a folder named 'raw' inside 'res/'.
 2. Place an audio file (e.g., 'song.mp3') and a video file (e.g., 'clip.mp4') inside 'res/raw/'.
@@ -66,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         Button btnPlayVideo = findViewById(R.id.btn_play_video);
         videoView = findViewById(R.id.video_player);
 
-        // 1. Setup Audio Player
+       
         mediaPlayer = MediaPlayer.create(this, R.raw.song); // Assumes 'song.mp3' in res/raw
 
         btnPlayMusic.setOnClickListener(v -> {
@@ -79,11 +78,10 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // 2. Setup Video Player
+   
         Uri videoUri = Uri.parse("android.resource://" + getPackageName() + "/" + R.raw.clip); // Assumes 'clip.mp4' in res/raw
         videoView.setVideoURI(videoUri);
         
-        // Add controls for the video
         MediaController mediaController = new MediaController(this);
         videoView.setMediaController(mediaController);
         mediaController.setAnchorView(videoView);
@@ -93,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Clean up media resources when the activity is destroyed
+   
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -109,9 +107,9 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-==============================================
+
 APP: Play Video from the Internet
-==============================================
+
 NOTE: 
 1. ADD PERMISSION in AndroidManifest.xml: <uses-permission android:name="android.permission.INTERNET"/>
 2. Use an HTTPS link to an MP4 file. The example link is a placeholder.
@@ -193,16 +191,16 @@ public class MainActivity extends AppCompatActivity {
         videoView = findViewById(R.id.internet_video_player);
         Button btnStartStream = findViewById(R.id.btn_start_stream);
 
-        // 1. Setup VideoView
+        
         Uri videoUri = Uri.parse(VIDEO_URL);
         videoView.setVideoURI(videoUri);
 
-        // 2. Add Media Controls
+       
         MediaController mediaController = new MediaController(this);
         videoView.setMediaController(mediaController);
         mediaController.setAnchorView(videoView);
 
-        // 3. Set up listeners
+        
         videoView.setOnPreparedListener(mp -> {
             Toast.makeText(MainActivity.this, "Video is ready to play.", Toast.LENGTH_SHORT).show();
             // Optional: Start automatically
@@ -225,9 +223,14 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-==============================================
+
 APP: Demonstrate Options Menu
-==============================================
+
+
+
+<application
+    android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+
 NOTE: 
 1. Create a new folder: 'res/menu/'.
 2. Create the menu resource file: 'res/menu/main_options_menu.xml'.
@@ -296,14 +299,14 @@ public class MainActivity extends AppCompatActivity {
         statusText = findViewById(R.id.status_text);
     }
 
-    // 1. Inflate the menu: This method is called to create the Options Menu
+   
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_options_menu, menu);
         return true;
     }
 
-    // 2. Handle item clicks: This method is called when a menu item is selected
+ 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -329,9 +332,9 @@ public class MainActivity extends AppCompatActivity {
 
 
 
-==============================================
+
 APP: Context Menu (Change Background Color)
-==============================================
+
 NOTE: The context menu appears when you long-press the TextView.
 
 --- Menu Resource (res/menu/context_color_menu.xml) ---
@@ -399,11 +402,10 @@ public class MainActivity extends AppCompatActivity {
         mainLayout = findViewById(R.id.main_layout);
         TextView targetView = findViewById(R.id.target_view);
 
-        // Crucial Step 1: Register the view that will trigger the Context Menu on long-press
         registerForContextMenu(targetView);
     }
 
-    // Crucial Step 2: Inflate the context menu XML when long-press occurs
+   
     @Override
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
@@ -411,7 +413,7 @@ public class MainActivity extends AppCompatActivity {
         menu.setHeaderTitle("Choose a Color");
     }
 
-    // Crucial Step 3: Handle the click action on the context menu item
+    
     @Override
     public boolean onContextItemSelected(MenuItem item) {
         int id = item.getItemId();
@@ -432,4 +434,5 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onContextItemSelected(item);
     }
+
 }
