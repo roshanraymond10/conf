@@ -1,0 +1,208 @@
+package com.example.crudoptionmenu;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.EditText;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class MainActivity extends AppCompatActivity {
+
+    DBHelper dbHelper;
+    EditText idInput, nameInput;
+    TextView resultView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        dbHelper = new DBHelper(this);
+        idInput = findViewById(R.id.idInput);
+        nameInput = findViewById(R.id.nameInput);
+        resultView = findViewById(R.id.resultView);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.option_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        switch (item.getItemId()) {
+            case R.id.create:
+                String nameCreate = nameInput.getText().toString();
+                if (!nameCreate.isEmpty()) {
+                    dbHelper.insertData(nameCreate);
+                    Toast.makeText(this, "Record Created", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Enter name", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+
+            case R.id.read:
+                String allData = dbHelper.getAllData();
+                resultView.setText(allData);
+                Toast.makeText(this, "Data Read", Toast.LENGTH_SHORT).show();
+                return true;
+
+            case R.id.update:
+                String idUpdate = idInput.getText().toString();
+                String nameUpdate = nameInput.getText().toString();
+                if (!idUpdate.isEmpty() && !nameUpdate.isEmpty()) {
+                    dbHelper.updateData(Integer.parseInt(idUpdate), nameUpdate);
+                    Toast.makeText(this, "Record Updated", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Enter ID and Name", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+
+            case R.id.delete:
+                String idDelete = idInput.getText().toString();
+                if (!idDelete.isEmpty()) {
+                    dbHelper.deleteData(Integer.parseInt(idDelete));
+                    Toast.makeText(this, "Record Deleted", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(this, "Enter ID", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+
+            case R.id.clear:
+                idInput.setText("");
+                nameInput.setText("");
+                resultView.setText("");
+                Toast.makeText(this, "Cleared", Toast.LENGTH_SHORT).show();
+                return true;
+
+            case R.id.exit:
+                finishAffinity();
+                Toast.makeText(this, "App Closed", Toast.LENGTH_SHORT).show();
+                return true;
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+}
+
+
+
+
+package com.example.crudoptionmenu;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+
+public class DBHelper extends SQLiteOpenHelper {
+
+    public static final String DB_NAME = "crudmenu.db";
+    public static final String TABLE_NAME = "records";
+    public static final String COL_ID = "id";
+    public static final String COL_NAME = "name";
+
+    public DBHelper(Context context) {
+        super(context, DB_NAME, null, 1);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE " + TABLE_NAME + "(" + COL_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " + COL_NAME + " TEXT)");
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
+        onCreate(db);
+    }
+
+    public void insertData(String name) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COL_NAME, name);
+        db.insert(TABLE_NAME, null, cv);
+    }
+
+    public String getAllData() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT * FROM " + TABLE_NAME, null);
+        StringBuilder sb = new StringBuilder();
+
+        while (cursor.moveToNext()) {
+            sb.append("ID: ").append(cursor.getInt(0))
+              .append(" | Name: ").append(cursor.getString(1))
+              .append("\n");
+        }
+        cursor.close();
+        return sb.toString();
+    }
+
+    public void updateData(int id, String newName) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COL_NAME, newName);
+        db.update(TABLE_NAME, cv, "id=?", new String[]{String.valueOf(id)});
+    }
+
+    public void deleteData(int id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_NAME, "id=?", new String[]{String.valueOf(id)});
+    }
+}
+
+
+
+
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="20dp">
+
+    <EditText
+        android:id="@+id/idInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter ID (for Update/Delete)"
+        android:inputType="number" />
+
+    <EditText
+        android:id="@+id/nameInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter Name"
+        android:layout_below="@id/idInput"
+        android:layout_marginTop="10dp"
+        android:inputType="text" />
+
+    <TextView
+        android:id="@+id/resultView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Output will appear here..."
+        android:textSize="18sp"
+        android:layout_below="@id/nameInput"
+        android:layout_marginTop="20dp" />
+</RelativeLayout>
+
+
+
+res/menu/option_menu.xml
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/create" android:title="Create" />
+    <item android:id="@+id/read" android:title="Read" />
+    <item android:id="@+id/update" android:title="Update" />
+    <item android:id="@+id/delete" android:title="Delete" />
+    <item android:id="@+id/clear" android:title="Clear" />
+    <item android:id="@+id/exit" android:title="Exit" />
+</menu>
+
