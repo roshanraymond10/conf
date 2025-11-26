@@ -1,111 +1,228 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>🏦 Bank Queue Dashboard — Enhanced</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial; padding: 16px; background:#f5f6fa; color:#222; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    h1 { margin:0; font-size:20px; }
+    .wrap { display:flex; gap:16px; margin-top:12px; }
+    .left { width: 48%; }
+    .right { width: 52%; }
+
+    .panel { background:#fff; border:1px solid #e0e3e8; padding:12px; border-radius:8px; margin-bottom:12px; }
+    .small { font-size:13px; color:#555; }
+    #counters { display:flex; gap:10px; flex-wrap:wrap; }
+
+    .counter {
+      width:220px; padding:10px; border-radius:8px; border:1px solid #ddd; background:#fcfcff;
+    }
+    .counter.busy { background: #fff2f2; border-color:#f0b0b0; }
+    .counter.free { background: #f4fff4; border-color:#b0f0b8; }
+    .muted { color:#666; font-size:12px; }
+
+    .controls { display:flex; gap:8px; align-items:center; }
+    input[type=number] { width:80px; padding:4px; }
+
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:6px 8px; border-bottom:1px solid #eee; text-align:left; }
+    th { background:#fafafa; font-weight:600; }
+
+    #logbox { height:160px; overflow:auto; background:#0b1220; color:#cfefff; padding:8px; border-radius:6px; font-family:monospace; font-size:12px; }
+    .metric { display:inline-block; margin-right:12px; font-weight:600; }
+
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🏦 Bank Multiprogramming Dashboard — Enhanced</h1>
+    <div class="small">Uptime: <span id="uptime">0s</span> • Running: <span id="running">yes</span></div>
+  </header>
+
+  <div class="wrap">
+    <div class="left">
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>Queue</strong> <span class="muted"> (next customers)</span></div>
+          <div class="small">Queue size: <span id="queue_size">0</span></div>
+        </div>
+        <pre id="queue_preview" style="height:90px; overflow:auto; background:#fafafa; padding:8px; border-radius:4px;"></pre>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>Counters</strong></div>
+          <div class="small">Workers: <span id="worker_count">0</span></div>
+        </div>
+        <div id="counters" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>Controls</strong></div>
+          <div class="small">Adjust generator</div>
+        </div>
+        <div style="margin-top:8px;" class="controls">
+          <button id="btnPause">Pause</button>
+          <button id="btnResume">Resume</button>
+          <label style="margin-left:8px;">Mean (s):</label>
+          <input id="meanInput" type="number" step="0.1" min="0.2" value="1.2">
+          <button id="btnSet">Set</button>
+          <button id="btnGetHistory" style="margin-left:auto;">Load History</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <strong>Logs</strong>
+        <div id="logbox"></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between;">
+          <div><strong>Metrics</strong></div>
+          <div class="small">Last update: <span id="last_update">-</span></div>
+        </div>
+        <div style="margin-top:8px;">
+          <span class="metric">Generated: <span id="m_gen">0</span></span>
+          <span class="metric">Dispatched: <span id="m_disp">0</span></span>
+          <span class="metric">Completed: <span id="m_comp">0</span></span>
+          <span class="metric">Mean: <span id="m_mean">1.2</span>s</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <strong>Recent Job History (last 50)</strong>
+        <table>
+          <thead><tr><th>ID</th><th>Arr</th><th>Start</th><th>Finish</th><th>Service</th><th>Worker</th></tr></thead>
+          <tbody id="history_body"></tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <strong>Quick Info</strong>
+        <div style="margin-top:8px;">
+          <div>Customer generator: <span id="running_state">running</span></div>
+          <div>Connected workers: <span id="workers_connected">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const socket = io();
+
+  const logbox = document.getElementById("logbox");
+  function addLog(line) {
+    const atBottom = (logbox.scrollTop + logbox.clientHeight + 20) >= logbox.scrollHeight;
+    logbox.innerText = (logbox.innerText ? logbox.innerText + "\n" : "") + line;
+    if (atBottom) logbox.scrollTop = logbox.scrollHeight;
+  }
+
+  socket.on("connect", () => addLog("[UI] connected"));
+  socket.on("disconnect", () => addLog("[UI] disconnected"));
+
+  socket.on("log", (line) => {
+    addLog(line);
+  });
+
+  socket.on("snapshot", (s) => {
+    document.getElementById("queue_size").innerText = s.queue_size;
+    document.getElementById("queue_preview").innerText = JSON.stringify(s.queue_preview.slice(0,20), null, 2);
+    document.getElementById("m_gen").innerText = s.metrics.total_generated;
+    document.getElementById("m_disp").innerText = s.metrics.total_dispatched;
+    document.getElementById("m_comp").innerText = s.metrics.total_completed;
+    document.getElementById("last_update").innerText = new Date(s.time*1000).toLocaleTimeString();
+    document.getElementById("m_mean").innerText = s.customer_mean;
+    document.getElementById("running").innerText = s.running ? "yes" : "no";
+    document.getElementById("running_state").innerText = s.running ? "running" : "paused";
+    document.getElementById("uptime").innerText = s.uptime + "s";
+    document.getElementById("worker_count").innerText = s.counters.length;
+    document.getElementById("workers_connected").innerText = s.counters.length;
+
+    // counters
+    const cdiv = document.getElementById("counters");
+    cdiv.innerHTML = "";
+    s.counters.forEach(c => {
+      const el = document.createElement("div");
+      el.className = "counter " + (c.busy ? "busy" : "free");
+      el.innerHTML = `
+        <div style="font-weight:700">${c.counter}</div>
+        <div class="muted">worker: ${c.worker}</div>
+        <div style="margin-top:6px"><strong>Status:</strong> ${c.busy ? "Busy" : "Free"}</div>
+        <div class="muted">Customer: ${c.customer ?? "-"}</div>
+        <div class="muted">Service: ${c.service_time ?? "-"}</div>
+        <div class="muted">Done: ${c.jobs_done} • Busy time: ${c.busy_time}s</div>
+        <div style="margin-top:6px">Util: ${c.util_percent}%</div>
+      `;
+      cdiv.appendChild(el);
+    });
+  });
+
+  // history payload
+  socket.on("history", (jobs) => {
+    const tbody = document.getElementById("history_body");
+    tbody.innerHTML = "";
+    jobs.forEach(j => {
+      const tr = document.createElement("tr");
+      function fmt(ts) { return ts ? new Date(ts*1000).toLocaleTimeString() : "-"; }
+      tr.innerHTML = `<td>${j.customer_id}</td>
+                      <td>${fmt(j.arrival)}</td>
+                      <td>${fmt(j.started)}</td>
+                      <td>${fmt(j.finished)}</td>
+                      <td>${j.service_time ?? "-"}</td>
+                      <td>${j.assigned_worker ?? "-"}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // control buttons
+  document.getElementById("btnPause").addEventListener("click", () => {
+    socket.emit("control", { action: "pause" });
+  });
+  document.getElementById("btnResume").addEventListener("click", () => {
+    socket.emit("control", { action: "resume" });
+  });
+  document.getElementById("btnSet").addEventListener("click", () => {
+    const val = parseFloat(document.getElementById("meanInput").value);
+    if (isNaN(val) || val < 0.2) return alert("Mean must be >= 0.2");
+    socket.emit("control", { action: "set_mean", value: val });
+  });
+  document.getElementById("btnGetHistory").addEventListener("click", () => {
+    socket.emit("control", { action: "get_history" });
+  });
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
-client.py
-Usage: python client.py <server_ip> [--simulate-cpu]
-
-Connects to server TCP port 9999, receives jobs, does CPU or sleep,
-sends heartbeat and sends done messages.
-"""
-import socket
-import sys
-import threading
-import time
-import json
-
-TCP_PORT = 9999
-HEARTBEAT_INTERVAL = 2.0
-
-def cpu_heavy(service_time):
-    iterations = int(150000 * max(1.0, service_time))
-    acc = 0
-    for i in range(iterations):
-        acc += (i ^ (i << 1)) & 0xFFFF
-    return acc
-
-def send_heartbeat(sock, client_id):
-    while True:
-        try:
-            sock.sendall((json.dumps({"type":"heartbeat","id":client_id}) + "\n").encode())
-        except Exception:
-            break
-        time.sleep(HEARTBEAT_INTERVAL)
-
-def handle_server(sock, simulate_cpu):
-    buf = b''
-    client_id = None
-    while True:
-        data = sock.recv(4096)
-        if not data:
-            print("[CLIENT] server closed")
-            break
-        buf += data
-        while b'\n' in buf:
-            line, buf = buf.split(b'\n', 1)
-            if not line: continue
-            try:
-                msg = json.loads(line.decode())
-            except:
-                continue
-            typ = msg.get('type')
-            if typ == 'assign':
-                client_id = msg.get('id')
-                print("[CLIENT] assigned id", client_id)
-                threading.Thread(target=send_heartbeat, args=(sock,client_id), daemon=True).start()
-            elif typ == 'job':
-                cust = msg.get('customer_id')
-                st = float(msg.get('service_time', 2.0))
-                print(f"[CLIENT] Received job {cust} st={st}")
-                if simulate_cpu:
-                    cpu_heavy(st)
-                else:
-                    time.sleep(st)
-                done = {"type":"done", "customer_id": cust, "service_time": st}
-                try:
-                    sock.sendall((json.dumps(done) + "\n").encode())
-                except Exception as e:
-                    print("[CLIENT] failed to send done", e)
-
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python client.py <server_ip> [--simulate-cpu]")
-        sys.exit(1)
-    server_ip = sys.argv[1]
-    simulate_cpu = ("--simulate-cpu" in sys.argv)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((server_ip, TCP_PORT))
-    print("[CLIENT] Connected to server", server_ip)
-    handle_server(sock, simulate_cpu)
-
-if __name__ == "__main__":
-    main()
-
-
-
-
-
-
-client.py
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-server.py - Banking Multiprogramming Server
--------------------------------------------
-- TCP worker server (port 9999)
-- Dispatches customers to workers (clients)
-- Tracks counters like a real bank
-- Flask-SocketIO dashboard on port 5000
+server.py - Banking Multiprogramming Server (enhanced)
+- Emits per-worker utilization and job-history
+- Emits logs to dashboard
+- Dashboard controls: pause/resume, adjust arrival mean
+Run: python server.py
 """
 
 import socket
@@ -115,8 +232,7 @@ import time
 import random
 import queue
 import sqlite3
-from multiprocessing import Pool
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request
 from flask_socketio import SocketIO
 
 # ---------------- CONFIG ----------------
@@ -127,13 +243,19 @@ WS_PORT = 5000
 HEARTBEAT_INTERVAL = 2.0
 HEARTBEAT_TIMEOUT = 6.0
 
-CUSTOMER_MEAN = 1.2
+CUSTOMER_MEAN = 1.2   # this is adjustable from UI
 SERVICE_MIN = 2.0
 SERVICE_MAX = 5.0
 
-LOCAL_CPU_WORKERS = 0  # No local counters now (only remote clients)
-
 DB_FILE = "server_data.db"
+
+# ---------------- Flask + SocketIO ----------------
+app = Flask(__name__, static_folder="static")
+sio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
+
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
 
 # ---------------- DB helper ----------------
 def init_db():
@@ -154,6 +276,7 @@ def init_db():
     conn.close()
 
 def db_upsert(cust):
+    # cust: may contain keys: customer_id, arrival, dispatched, started, finished, service_time, assigned_worker
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute("""
@@ -172,41 +295,69 @@ def db_upsert(cust):
     conn.commit()
     conn.close()
 
-# ---------------- Flask Dashboard ----------------
-app = Flask(__name__, static_folder="static")
-sio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
+def recent_jobs(limit=30):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT id, arrival, dispatched, started, finished, service_time, assigned_worker FROM customers ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall()
+    conn.close()
+    jobs = []
+    for r in rows:
+        jobs.append({
+            "customer_id": r[0],
+            "arrival": r[1],
+            "dispatched": r[2],
+            "started": r[3],
+            "finished": r[4],
+            "service_time": r[5],
+            "assigned_worker": r[6]
+        })
+    return jobs
 
-@app.route("/")
-def index():
-    return send_from_directory("static", "index.html")
-
-# ---------------- Shared State ----------------
+# ---------------- Shared state ----------------
 central_queue = queue.Queue()
-clients = {}       # client_id → {sock, busy, addr, last_heartbeat, current_job}
+clients = {}   # client_id -> { sock, addr, busy, last_heartbeat, current_job, jobs_done, busy_time, last_active, started_ts }
 clients_lock = threading.Lock()
 
 metrics = {"total_generated": 0, "total_dispatched": 0, "total_completed": 0}
 metrics_lock = threading.Lock()
 
-local_pool = None
+# control flags
+control = {
+    "running": True,
+    "customer_mean": CUSTOMER_MEAN
+}
 
-# ---------------- Customer Generator ----------------
+# ---------------- logging helper (also emits to UI) ----------------
+def server_log(msg):
+    ts = time.strftime("%H:%M:%S")
+    line = f"[{ts}] {msg}"
+    print(line)
+    try:
+        sio.emit("log", line)
+    except Exception:
+        pass
+
+# ---------------- Customer generator ----------------
 cust_seq = 1
 def customer_generator(stop):
     global cust_seq
     while not stop.is_set():
-        time.sleep(max(0.3, random.expovariate(1.0 / CUSTOMER_MEAN)))
+        if not control["running"]:
+            time.sleep(0.5)
+            continue
+        mean = control.get("customer_mean", CUSTOMER_MEAN)
+        delay = max(0.2, random.expovariate(1.0 / mean))
+        time.sleep(delay)
         cid = cust_seq
         cust_seq += 1
         st = round(random.uniform(SERVICE_MIN, SERVICE_MAX), 2)
         cust = {"customer_id": cid, "arrival": time.time(), "service_time": st}
         central_queue.put(cust)
         db_upsert(cust)
-
         with metrics_lock:
             metrics["total_generated"] += 1
-
-        print(f"[GEN] New customer {cid} st={st}")
+        server_log(f"New customer {cid} st={st}")
         emit_snapshot()
 
 # ---------------- Dispatcher ----------------
@@ -218,194 +369,260 @@ def dispatcher(stop):
             continue
 
         assigned = False
-
         with clients_lock:
+            # assign to first free client
             for cid, info in clients.items():
-                if not info["busy"]:
+                if not info.get("busy"):
                     try:
-                        msg = {
-                            "type": "job",
-                            "customer_id": cust["customer_id"],
-                            "service_time": cust["service_time"]
-                        }
+                        msg = {"type":"job","customer_id":cust["customer_id"],"service_time":cust["service_time"]}
                         info["sock"].sendall((json.dumps(msg) + "\n").encode())
                         info["busy"] = True
                         info["current_job"] = cust
                         info["last_heartbeat"] = time.time()
+                        info["started_ts"] = time.time()
 
                         cust["dispatched"] = time.time()
-                        cust["started"] = time.time()
+                        cust["started"] = info["started_ts"]
                         cust["assigned_worker"] = cid
                         db_upsert(cust)
+
+                        info["jobs_done"] = info.get("jobs_done", 0)  # ensure exists
+                        # don't increment on dispatch, increment on done
 
                         with metrics_lock:
                             metrics["total_dispatched"] += 1
 
-                        print(f"[DISPATCH] Customer {cust['customer_id']} → {cid}")
+                        server_log(f"DISPATCH: Customer {cust['customer_id']} -> {cid}")
                         assigned = True
                         break
-                    except:
+                    except Exception as e:
+                        server_log(f"Dispatch send error to {cid}: {e}")
                         continue
 
         if not assigned:
+            # no free remote client -> put back into central queue
             central_queue.put(cust)
 
         emit_snapshot()
 
-# ---------------- Heartbeat Monitor ----------------
+# ---------------- Heartbeat monitor ----------------
 def monitor_clients(stop):
     while not stop.is_set():
         now = time.time()
         dead = []
-
         with clients_lock:
             for cid, info in list(clients.items()):
-                if now - info["last_heartbeat"] > HEARTBEAT_TIMEOUT:
-                    print(f"[MONITOR] {cid} TIMED OUT")
-                    if info["current_job"]:
-                        central_queue.put(info["current_job"])
+                last = info.get("last_heartbeat", 0)
+                if now - last > HEARTBEAT_TIMEOUT:
+                    server_log(f"MONITOR: {cid} timed out (last hb {now-last:.1f}s)")
+                    cur = info.get("current_job")
+                    if cur:
+                        server_log(f"MONITOR: Requeueing customer {cur['customer_id']}")
+                        central_queue.put(cur)
                     dead.append(cid)
-
             for cid in dead:
+                try:
+                    clients[cid]["sock"].close()
+                except:
+                    pass
                 clients.pop(cid, None)
-
         emit_snapshot()
         time.sleep(1)
 
 # ---------------- TCP Server ----------------
 def accept_clients(stop):
     serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     serv.bind((HOST, TCP_PORT))
-    serv.listen(10)
+    serv.listen(20)
     serv.settimeout(1)
-    print(f"[TCP] Listening on port {TCP_PORT}")
+    server_log(f"TCP listening on port {TCP_PORT}")
 
     while not stop.is_set():
         try:
             conn, addr = serv.accept()
         except socket.timeout:
             continue
-
         cid = f"client_{int(time.time()*1000)%100000}"
-        clients[cid] = {
-            "sock": conn,
-            "addr": addr,
-            "busy": False,
-            "last_heartbeat": time.time(),
-            "current_job": None
-        }
-
-        print(f"[TCP] Connected: {cid} from {addr}")
-        conn.sendall((json.dumps({"type": "assign", "id": cid}) + "\n").encode())
-
+        with clients_lock:
+            clients[cid] = {
+                "sock": conn,
+                "addr": addr,
+                "busy": False,
+                "last_heartbeat": time.time(),
+                "current_job": None,
+                "jobs_done": 0,
+                "busy_time": 0.0,
+                "last_active": time.time(),
+                "started_ts": None
+            }
+        server_log(f"TCP Connected: {cid} from {addr}")
+        try:
+            conn.sendall((json.dumps({"type":"assign","id":cid}) + "\n").encode())
+        except:
+            pass
         threading.Thread(target=client_recv_loop, args=(cid, conn), daemon=True).start()
         emit_snapshot()
 
 def client_recv_loop(cid, conn):
     buf = b""
-    while True:
-        data = conn.recv(4096)
-        if not data:
-            break
-
-        buf += data
-        while b"\n" in buf:
-            line, buf = buf.split(b"\n", 1)
-            if not line:
-                continue
-            msg = json.loads(line.decode())
-            handle_message(cid, msg)
-
-    print(f"[TCP] Closed: {cid}")
-    with clients_lock:
-        clients.pop(cid, None)
-    emit_snapshot()
+    try:
+        while True:
+            data = conn.recv(4096)
+            if not data:
+                break
+            buf += data
+            while b"\n" in buf:
+                line, buf = buf.split(b"\n", 1)
+                if not line:
+                    continue
+                try:
+                    msg = json.loads(line.decode())
+                except:
+                    continue
+                handle_message(cid, msg)
+    except Exception as e:
+        server_log(f"[client_recv_loop] error {e}")
+    finally:
+        server_log(f"TCP Closed: {cid}")
+        with clients_lock:
+            info = clients.pop(cid, None)
+            if info and info.get("current_job"):
+                central_queue.put(info["current_job"])
+        emit_snapshot()
 
 def handle_message(cid, msg):
     typ = msg.get("type")
+    now = time.time()
+    with clients_lock:
+        if cid not in clients:
+            return
 
     if typ == "heartbeat":
-        clients[cid]["last_heartbeat"] = time.time()
+        with clients_lock:
+            clients[cid]["last_heartbeat"] = now
 
     elif typ == "done":
-        cust_id = msg["customer_id"]
-        clients[cid]["busy"] = False
-        clients[cid]["current_job"] = None
+        customer_id = msg.get("customer_id")
+        service_time = msg.get("service_time")
+        finished = time.time()
+
+        # update DB & metrics; update client stats
+        with clients_lock:
+            info = clients.get(cid)
+            if info:
+                info["busy"] = False
+                cur = info.get("current_job")
+                start_ts = info.get("started_ts") or cur.get("started") if cur else None
+                if start_ts:
+                    delta = finished - start_ts
+                    info["busy_time"] = info.get("busy_time", 0.0) + delta
+                info["jobs_done"] = info.get("jobs_done", 0) + 1
+                info["current_job"] = None
+                info["started_ts"] = None
+                info["last_active"] = time.time()
 
         db_upsert({
-            "customer_id": cust_id,
-            "finished": time.time(),
+            "customer_id": customer_id,
+            "finished": finished,
+            "service_time": service_time,
             "assigned_worker": cid
         })
 
         with metrics_lock:
             metrics["total_completed"] += 1
 
-        print(f"[DONE] {cid} finished customer {cust_id}")
-
+        server_log(f"DONE: {cid} finished customer {customer_id}")
     emit_snapshot()
 
-# ---------------- Dashboard Snapshot ----------------
+# ---------------- Snapshot and control ----------------
 def make_snapshot():
+    uptime = time.time() - start_time
     with clients_lock:
         counters = []
-        idx = 1
-        for cid, info in clients.items():
+        for idx, (cid, info) in enumerate(clients.items(), start=1):
+            busy = bool(info.get("busy"))
+            jobs_done = info.get("jobs_done", 0)
+            busy_time = info.get("busy_time", 0.0)
+            util = (busy_time / uptime) * 100.0 if uptime > 0 else 0.0
             counters.append({
                 "counter": f"Counter {idx}",
                 "worker": cid,
-                "busy": info["busy"],
-                "customer": info["current_job"]["customer_id"] if info["busy"] else None,
-                "service_time": info["current_job"]["service_time"] if info["busy"] else None
+                "busy": busy,
+                "customer": info.get("current_job", {}).get("customer_id") if info.get("current_job") else None,
+                "service_time": info.get("current_job", {}).get("service_time") if info.get("current_job") else None,
+                "jobs_done": jobs_done,
+                "busy_time": round(busy_time, 2),
+                "util_percent": round(util, 1),
+                "addr": info.get("addr")
             })
-            idx += 1
 
     qsize = central_queue.qsize()
-    queue_preview = list(central_queue.queue)[:10]
-
+    queue_preview = list(central_queue.queue)[:20]
     with metrics_lock:
         m = metrics.copy()
 
-    return {
+    snap = {
         "queue_size": qsize,
         "queue_preview": queue_preview,
         "counters": counters,
         "metrics": m,
-        "time": time.time()
+        "time": time.time(),
+        "running": control["running"],
+        "customer_mean": control.get("customer_mean", CUSTOMER_MEAN),
+        "uptime": int(uptime)
     }
+    return snap
 
 def emit_snapshot():
-    sio.emit("snapshot", make_snapshot())
+    try:
+        snap = make_snapshot()
+        sio.emit("snapshot", snap)
+    except Exception:
+        pass
 
-# ---------------- Main ----------------
+# expose control events from UI
+@sio.on("control")
+def on_control(data):
+    # data: { action: "pause" | "resume" | "set_mean", value: ... }
+    action = data.get("action")
+    if action == "pause":
+        control["running"] = False
+        server_log("Generator paused by UI")
+    elif action == "resume":
+        control["running"] = True
+        server_log("Generator resumed by UI")
+    elif action == "set_mean":
+        try:
+            v = float(data.get("value"))
+            control["customer_mean"] = max(0.2, v)
+            server_log(f"Generator mean set to {control['customer_mean']}")
+        except:
+            pass
+    elif action == "get_history":
+        jobs = recent_jobs(50)
+        sio.emit("history", jobs)
+
+# logs are also emitted in server_log
+
+# ---------------- Threads starter ----------------
 def run_server():
     stop = threading.Event()
-
     threads = [
         threading.Thread(target=accept_clients, args=(stop,), daemon=True),
         threading.Thread(target=customer_generator, args=(stop,), daemon=True),
         threading.Thread(target=dispatcher, args=(stop,), daemon=True),
         threading.Thread(target=monitor_clients, args=(stop,), daemon=True),
     ]
-
     for t in threads:
         t.start()
-
     return stop
 
+# ---------------- Main ----------------
 if __name__ == "__main__":
-    print("[SERVER] Initializing database...")
     init_db()
-
+    start_time = time.time()
+    server_log("Starting server...")
     stop_event = run_server()
-
-    print(f"[SERVER] Dashboard at http://0.0.0.0:{WS_PORT}")
+    server_log(f"Web dashboard at http://0.0.0.0:{WS_PORT}")
     sio.run(app, host="0.0.0.0", port=WS_PORT)
-
-
-
-
-
-
-
-//server.py
