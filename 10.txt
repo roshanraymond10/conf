@@ -1,632 +1,827 @@
-==============================================
-APP: Sum and Average of Three Subjects
-==============================================
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>🏦 Bank Queue Dashboard — Enhanced (Amdahl)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    body { font-family: Arial; padding: 16px; background:#f5f6fa; color:#222; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    h1 { margin:0; font-size:20px; }
+    .wrap { display:flex; gap:16px; margin-top:12px; }
+    .left { width: 48%; }
+    .right { width: 52%; }
 
---- AndroidManifest.xml (Modifications) ---
+    .panel { background:#fff; border:1px solid #e0e3e8; padding:12px; border-radius:8px; margin-bottom:12px; }
+    .small { font-size:13px; color:#555; }
+    #counters { display:flex; gap:10px; flex-wrap:wrap; }
 
-<!-- No special permissions or components required -->
-<manifest ...>
-    <application ...>
-        <activity android:name=".MainActivity" android:exported="true">...</activity>
-    </application>
-</manifest>
-
---- UI (activity_main.xml) ---
-
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enter Marks (Max 100 per Subject)"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="15dp"/>
-
-    <EditText
-        android:id="@+id/et_sub1"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Subject 1 Marks"
-        android:inputType="numberDecimal"
-        android:maxLength="5"/>
-
-    <EditText
-        android:id="@+id/et_sub2"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Subject 2 Marks"
-        android:inputType="numberDecimal"
-        android:maxLength="5"/>
-
-    <EditText
-        android:id="@+id/et_sub3"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Subject 3 Marks"
-        android:inputType="numberDecimal"
-        android:maxLength="5"
-        android:layout_marginBottom="20dp"/>
-
-    <Button
-        android:id="@+id/btn_calculate"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Calculate Results"
-        android:layout_marginBottom="30dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="RESULTS:"
-        android:textSize="20sp"
-        android:textStyle="italic"/>
-
-    <TextView
-        android:id="@+id/tv_sum"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Total Marks: 0.0"
-        android:textSize="18sp"
-        android:layout_marginTop="5dp"/>
-
-    <TextView
-        android:id="@+id/tv_average"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Average Marks: 0.0"
-        android:textSize="18sp"
-        android:textColor="@android:color/holo_red_dark"/>
-
-</LinearLayout>
-
---- Functionality (MainActivity.java) ---
-
-package com.example.marksapp;
-
-import androidx.appcompat.app.AppCompatActivity;
-import android.os.Bundle;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
-
-public class MainActivity extends AppCompatActivity {
-
-    private EditText etSub1, etSub2, etSub3;
-    private TextView tvSum, tvAverage;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        // Initialize input fields
-        etSub1 = findViewById(R.id.et_sub1);
-        etSub2 = findViewById(R.id.et_sub2);
-        etSub3 = findViewById(R.id.et_sub3);
-        
-        // Initialize output fields
-        tvSum = findViewById(R.id.tv_sum);
-        tvAverage = findViewById(R.id.tv_average);
-        
-        Button btnCalculate = findViewById(R.id.btn_calculate);
-        
-        btnCalculate.setOnClickListener(v -> calculateResults());
+    .counter {
+      width:220px; padding:10px; border-radius:8px; border:1px solid #ddd; background:#fcfcff;
     }
+    .counter.busy { background: #fff2f2; border-color:#f0b0b0; }
+    .counter.free { background: #f4fff4; border-color:#b0f0b8; }
+    .muted { color:#666; font-size:12px; }
 
-    private void calculateResults() {
-        // Read input strings
-        String strSub1 = etSub1.getText().toString();
-        String strSub2 = etSub2.getText().toString();
-        String strSub3 = etSub3.getText().toString();
+    .controls { display:flex; gap:8px; align-items:center; }
+    input[type=number] { width:80px; padding:4px; }
 
-        if (strSub1.isEmpty() || strSub2.isEmpty() || strSub3.isEmpty()) {
-            Toast.makeText(this, "Please enter marks for all three subjects.", Toast.LENGTH_SHORT).show();
-            return;
-        }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { padding:6px 8px; border-bottom:1px solid #eee; text-align:left; }
+    th { background:#fafafa; font-weight:600; }
 
-        try {
-            // Convert to double (allowing for decimal marks)
-            double sub1 = Double.parseDouble(strSub1);
-            double sub2 = Double.parseDouble(strSub2);
-            double sub3 = Double.parseDouble(strSub3);
-            
-            // Validate marks (optional, but good practice)
-            if (sub1 < 0 || sub2 < 0 || sub3 < 0) {
-                 Toast.makeText(this, "Marks cannot be negative.", Toast.LENGTH_SHORT).show();
-                 return;
-            }
+    #logbox { height:160px; overflow:auto; background:#0b1220; color:#cfefff; padding:8px; border-radius:6px; font-family:monospace; font-size:12px; }
+    .metric { display:inline-block; margin-right:12px; font-weight:600; }
 
-            // Calculate Sum
-            double sum = sub1 + sub2 + sub3;
-            
-            // Calculate Average (divided by 3 subjects)
-            double average = sum / 3.0;
+    .amdahl { background:#fbfbff; border:1px solid #e8e8ff; padding:10px; border-radius:6px; margin-top:8px; }
+    .big { font-size:18px; font-weight:700; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🏦 Bank Multiprogramming Dashboard — Enhanced (Amdahl)</h1>
+    <div class="small">Uptime: <span id="uptime">0s</span> • Running: <span id="running">yes</span></div>
+  </header>
 
-            // Display results, formatted to two decimal places
-            tvSum.setText(String.format("Total Marks: %.2f", sum));
-            tvAverage.setText(String.format("Average Marks: %.2f", average));
+  <div class="wrap">
+    <div class="left">
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>Queue</strong> <span class="muted"> (next customers)</span></div>
+          <div class="small">Queue size: <span id="queue_size">0</span></div>
+        </div>
+        <pre id="queue_preview" style="height:90px; overflow:auto; background:#fafafa; padding:8px; border-radius:4px;"></pre>
+      </div>
 
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Invalid mark entered. Please use numbers.", Toast.LENGTH_LONG).show();
-        }
-    }
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>Counters</strong></div>
+          <div class="small">Workers: <span id="worker_count">0</span></div>
+        </div>
+        <div id="counters" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>Controls</strong></div>
+          <div class="small">Adjust generator & Amdahl</div>
+        </div>
+        <div style="margin-top:8px;" class="controls">
+          <button id="btnPause">Pause</button>
+          <button id="btnResume">Resume</button>
+          <label style="margin-left:8px;">Mean (s):</label>
+          <input id="meanInput" type="number" step="0.1" min="0.2" value="1.2">
+          <button id="btnSet">Set</button>
+          <button id="btnGetHistory" style="margin-left:auto;">Load History</button>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label>Serial fraction (Amdahl): <span id="serial_val">0.20</span></label>
+          <input id="serialInput" type="range" min="0" max="1" step="0.01" value="0.2" style="width:100%">
+          <div style="display:flex; gap:8px; margin-top:6px; align-items:center;">
+            <input id="serialNumber" type="number" step="0.01" min="0" max="1" value="0.2" style="width:80px;">
+            <button id="btnSetSerial">Set Serial</button>
+            <div style="margin-left:auto;">
+              <button id="btnExplain">Explain Amdahl</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <strong>Logs</strong>
+        <div id="logbox"></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="panel">
+        <div style="display:flex; justify-content:space-between;">
+          <div><strong>Metrics</strong></div>
+          <div class="small">Last update: <span id="last_update">-</span></div>
+        </div>
+        <div style="margin-top:8px;">
+          <span class="metric">Generated: <span id="m_gen">0</span></span>
+          <span class="metric">Dispatched: <span id="m_disp">0</span></span>
+          <span class="metric">Completed: <span id="m_comp">0</span></span>
+          <span class="metric">Mean: <span id="m_mean">1.2</span>s</span>
+        </div>
+
+        <div class="amdahl" id="amdahl_box" style="margin-top:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>Amdahl / Parallelism</strong></div>
+            <div class="small">Workers: <span id="am_workers">0</span></div>
+          </div>
+          <div style="margin-top:8px;">
+            <div>Serial fraction (f): <span id="am_serial">0.20</span></div>
+            <div style="margin-top:6px;">
+              <div>Theoretical speedup S(N) = 1 / ( f + (1-f)/N )</div>
+              <div style="margin-top:6px;">Theoretical S(N): <span class="big" id="am_theoretical">1.00x</span></div>
+              <div style="margin-top:6px;">Measured speedup (observed): <span class="big" id="am_measured">1.00x</span></div>
+              <div style="margin-top:6px;" class="muted">
+                Single-worker throughput est: <span id="am_single_th">-</span> jobs/s • Current throughput: <span id="am_current_th">-</span> jobs/s
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="panel">
+        <strong>Recent Job History (last 50)</strong>
+        <table>
+          <thead><tr><th>ID</th><th>Arr</th><th>Start</th><th>Finish</th><th>Service</th><th>Worker</th></tr></thead>
+          <tbody id="history_body"></tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <strong>Quick Info</strong>
+        <div style="margin-top:8px;">
+          <div>Customer generator: <span id="running_state">running</span></div>
+          <div>Connected workers: <span id="workers_connected">0</span></div>
+        </div>
+        <div style="margin-top:8px;">
+          <button id="btnShowFormula">Show formula</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const socket = io();
+
+  const logbox = document.getElementById("logbox");
+  function addLog(line) {
+    const atBottom = (logbox.scrollTop + logbox.clientHeight + 20) >= logbox.scrollHeight;
+    logbox.innerText = (logbox.innerText ? logbox.innerText + "\n" : "") + line;
+    if (atBottom) logbox.scrollTop = logbox.scrollHeight;
+  }
+
+  socket.on("connect", () => addLog("[UI] connected"));
+  socket.on("disconnect", () => addLog("[UI] disconnected"));
+
+  socket.on("log", (line) => {
+    addLog(line);
+  });
+
+  socket.on("snapshot", (s) => {
+    document.getElementById("queue_size").innerText = s.queue_size;
+    document.getElementById("queue_preview").innerText = JSON.stringify(s.queue_preview.slice(0,20), null, 2);
+    document.getElementById("m_gen").innerText = s.metrics.total_generated;
+    document.getElementById("m_disp").innerText = s.metrics.total_dispatched;
+    document.getElementById("m_comp").innerText = s.metrics.total_completed;
+    document.getElementById("last_update").innerText = new Date(s.time*1000).toLocaleTimeString();
+    document.getElementById("m_mean").innerText = s.customer_mean;
+    document.getElementById("running").innerText = s.running ? "yes" : "no";
+    document.getElementById("running_state").innerText = s.running ? "running" : "paused";
+    document.getElementById("uptime").innerText = s.uptime + "s";
+    document.getElementById("worker_count").innerText = s.counters.length;
+    document.getElementById("workers_connected").innerText = s.counters.length;
+
+    // counters
+    const cdiv = document.getElementById("counters");
+    cdiv.innerHTML = "";
+    s.counters.forEach(c => {
+      const el = document.createElement("div");
+      el.className = "counter " + (c.busy ? "busy" : "free");
+      el.innerHTML = `
+        <div style="font-weight:700">${c.counter}</div>
+        <div class="muted">worker: ${c.worker}</div>
+        <div style="margin-top:6px"><strong>Status:</strong> ${c.busy ? "Busy" : "Free"}</div>
+        <div class="muted">Customer: ${c.customer ?? "-"}</div>
+        <div class="muted">Service: ${c.service_time ?? "-"}</div>
+        <div class="muted">Done: ${c.jobs_done} • Busy time: ${c.busy_time}s</div>
+        <div style="margin-top:6px">Util: ${c.util_percent}%</div>
+      `;
+      cdiv.appendChild(el);
+    });
+
+    // Amdahl UI updates
+    document.getElementById("am_workers").innerText = s.worker_count;
+    document.getElementById("am_serial").innerText = s.serial_fraction.toFixed(2);
+    document.getElementById("am_theoretical").innerText = s.theoretical_speedup + "x";
+    document.getElementById("am_measured").innerText = s.measured_speedup + "x";
+    document.getElementById("am_single_th").innerText = s.single_worker_throughput;
+    document.getElementById("am_current_th").innerText = s.current_throughput;
+
+    // keep the slider in sync if set elsewhere
+    document.getElementById("serial_val").innerText = s.serial_fraction.toFixed(2);
+    document.getElementById("serialInput").value = s.serial_fraction;
+    document.getElementById("serialNumber").value = s.serial_fraction;
+  });
+
+  // history payload
+  socket.on("history", (jobs) => {
+    const tbody = document.getElementById("history_body");
+    tbody.innerHTML = "";
+    jobs.forEach(j => {
+      const tr = document.createElement("tr");
+      function fmt(ts) { return ts ? new Date(ts*1000).toLocaleTimeString() : "-"; }
+      tr.innerHTML = `<td>${j.customer_id}</td>
+                      <td>${fmt(j.arrival)}</td>
+                      <td>${fmt(j.started)}</td>
+                      <td>${fmt(j.finished)}</td>
+                      <td>${j.service_time ?? "-"}</td>
+                      <td>${j.assigned_worker ?? "-"}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+
+  // control buttons
+  document.getElementById("btnPause").addEventListener("click", () => {
+    socket.emit("control", { action: "pause" });
+  });
+  document.getElementById("btnResume").addEventListener("click", () => {
+    socket.emit("control", { action: "resume" });
+  });
+  document.getElementById("btnSet").addEventListener("click", () => {
+    const val = parseFloat(document.getElementById("meanInput").value);
+    if (isNaN(val) || val < 0.2) return alert("Mean must be >= 0.2");
+    socket.emit("control", { action: "set_mean", value: val });
+  });
+  document.getElementById("btnGetHistory").addEventListener("click", () => {
+    socket.emit("control", { action: "get_history" });
+  });
+
+  // serial controls
+  const serialInput = document.getElementById("serialInput");
+  const serialNumber = document.getElementById("serialNumber");
+  serialInput.addEventListener("input", (e) => {
+    const v = parseFloat(e.target.value);
+    document.getElementById("serial_val").innerText = v.toFixed(2);
+    serialNumber.value = v;
+  });
+  document.getElementById("btnSetSerial").addEventListener("click", () => {
+    const v = parseFloat(serialNumber.value);
+    if (isNaN(v) || v < 0 || v > 1) return alert("Serial must be between 0 and 1");
+    serialInput.value = v;
+    document.getElementById("serial_val").innerText = v.toFixed(2);
+    socket.emit("control", { action: "set_serial", value: v });
+  });
+
+  document.getElementById("btnExplain").addEventListener("click", () => {
+    alert(
+      "Amdahl's Law: Theoretical speedup S(N) = 1 / ( f + (1-f)/N )\n" +
+      "f = serial fraction (portion that cannot be parallelized), N = number of workers.\n" +
+      "Use the slider / input to change f and observe theoretical vs measured speedup."
+    );
+  });
+
+  document.getElementById("btnShowFormula").addEventListener("click", () => {
+    const el = document.getElementById("amdahl_box");
+    alert(el.innerText);
+  });
+</script>
+</body>
+</html>
+
+
+
+
+
+//index.html
+
+
+
+"""
+server.py - Banking Multiprogramming Server (enhanced)
+Includes Amdahl's law representation and measured speedup metrics.
+Run: python server.py
+"""
+import socket
+import threading
+import json
+import time
+import random
+import queue
+import sqlite3
+from flask import Flask, send_from_directory, request
+from flask_socketio import SocketIO
+
+# ---------------- CONFIG ----------------
+HOST = ""
+TCP_PORT = 9999
+WS_PORT = 5000
+
+HEARTBEAT_INTERVAL = 2.0
+HEARTBEAT_TIMEOUT = 6.0
+
+CUSTOMER_MEAN = 1.2   # this is adjustable from UI
+SERVICE_MIN = 2.0
+SERVICE_MAX = 5.0
+
+DB_FILE = "server_data.db"
+
+# ---------------- Flask + SocketIO ----------------
+app = Flask(__name__, static_folder="static")
+sio = SocketIO(app, async_mode="threading", cors_allowed_origins="*")
+
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
+
+# ---------------- DB helper ----------------
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS customers (
+            id INTEGER PRIMARY KEY,
+            arrival REAL,
+            dispatched REAL,
+            started REAL,
+            finished REAL,
+            service_time REAL,
+            assigned_worker TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def db_upsert(cust):
+    # cust: may contain keys: customer_id, arrival, dispatched, started, finished, service_time, assigned_worker
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("""
+        INSERT OR REPLACE INTO customers
+        (id, arrival, dispatched, started, finished, service_time, assigned_worker)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (
+        cust.get("customer_id"),
+        cust.get("arrival"),
+        cust.get("dispatched"),
+        cust.get("started"),
+        cust.get("finished"),
+        cust.get("service_time"),
+        cust.get("assigned_worker"),
+    ))
+    conn.commit()
+    conn.close()
+
+def recent_jobs(limit=30):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT id, arrival, dispatched, started, finished, service_time, assigned_worker FROM customers ORDER BY id DESC LIMIT ?", (limit,))
+    rows = c.fetchall()
+    conn.close()
+    jobs = []
+    for r in rows:
+        jobs.append({
+            "customer_id": r[0],
+            "arrival": r[1],
+            "dispatched": r[2],
+            "started": r[3],
+            "finished": r[4],
+            "service_time": r[5],
+            "assigned_worker": r[6]
+        })
+    return jobs
+
+# ---------------- Shared state ----------------
+central_queue = queue.Queue()
+clients = {}   # client_id -> { sock, addr, busy, last_heartbeat, current_job, jobs_done, busy_time, last_active, started_ts }
+clients_lock = threading.Lock()
+
+metrics = {
+    "total_generated": 0,
+    "total_dispatched": 0,
+    "total_completed": 0,
+    # new: sum of service_time values received in 'done' messages
+    "total_service_time": 0.0
+}
+metrics_lock = threading.Lock()
+
+# control flags
+control = {
+    "running": True,
+    "customer_mean": CUSTOMER_MEAN,
+    # Amdahl control: fraction of workload that is serial (0.0 - 1.0)
+    "serial_fraction": 0.2
 }
 
+# ---------------- logging helper (also emits to UI) ----------------
+def server_log(msg):
+    ts = time.strftime("%H:%M:%S")
+    line = f"[{ts}] {msg}"
+    print(line)
+    try:
+        sio.emit("log", line)
+    except Exception:
+        pass
 
+# ---------------- Customer generator ----------------
+cust_seq = 1
+def customer_generator(stop):
+    global cust_seq
+    while not stop.is_set():
+        if not control["running"]:
+            time.sleep(0.5)
+            continue
+        mean = control.get("customer_mean", CUSTOMER_MEAN)
+        delay = max(0.2, random.expovariate(1.0 / mean))
+        time.sleep(delay)
+        cid = cust_seq
+        cust_seq += 1
+        st = round(random.uniform(SERVICE_MIN, SERVICE_MAX), 2)
+        cust = {"customer_id": cid, "arrival": time.time(), "service_time": st}
+        central_queue.put(cust)
+        db_upsert(cust)
+        with metrics_lock:
+            metrics["total_generated"] += 1
+        server_log(f"New customer {cid} st={st}")
+        emit_snapshot()
 
+# ---------------- Dispatcher ----------------
+def dispatcher(stop):
+    while not stop.is_set():
+        try:
+            cust = central_queue.get(timeout=0.5)
+        except queue.Empty:
+            continue
 
+        assigned = False
+        with clients_lock:
+            # assign to first free client
+            for cid, info in clients.items():
+                if not info.get("busy"):
+                    try:
+                        msg = {"type":"job","customer_id":cust["customer_id"],"service_time":cust["service_time"]}
+                        info["sock"].sendall((json.dumps(msg) + "\n").encode())
+                        info["busy"] = True
+                        info["current_job"] = cust
+                        info["last_heartbeat"] = time.time()
+                        info["started_ts"] = time.time()
 
+                        cust["dispatched"] = time.time()
+                        cust["started"] = info["started_ts"]
+                        cust["assigned_worker"] = cid
+                        db_upsert(cust)
 
-==============================================
-APP: Design Different Layouts Demonstration
-==============================================
-NOTE: Demonstrates LinearLayout, RelativeLayout, and FrameLayout usage within a ConstraintLayout.
+                        info["jobs_done"] = info.get("jobs_done", 0)  # ensure exists
 
---- AndroidManifest.xml (Modifications) ---
+                        with metrics_lock:
+                            metrics["total_dispatched"] += 1
 
-<!-- No special permissions or components required -->
-<manifest ...>
-    <application ...>
-        <activity android:name=".MainActivity" android:exported="true">...</activity>
-    </application>
-</manifest>
+                        server_log(f"DISPATCH: Customer {cust['customer_id']} -> {cid}")
+                        assigned = True
+                        break
+                    except Exception as e:
+                        server_log(f"Dispatch send error to {cid}: {e}")
+                        continue
 
---- UI (activity_main.xml) ---
+        if not assigned:
+            # no free remote client -> put back into central queue
+            central_queue.put(cust)
 
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:padding="16dp"
-    tools:context=".MainActivity">
+        emit_snapshot()
 
-    <!-- 1. LinearLayout Demo (Stretches across top half) -->
-    <LinearLayout
-        android:id="@+id/linear_layout_section"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="#E0F7FA"
-        android:orientation="horizontal"
-        android:gravity="center"
-        app:layout_constraintBottom_toTopOf="@+id/guideline"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+# ---------------- Heartbeat monitor ----------------
+def monitor_clients(stop):
+    while not stop.is_set():
+        now = time.time()
+        dead = []
+        with clients_lock:
+            for cid, info in list(clients.items()):
+                last = info.get("last_heartbeat", 0)
+                if now - last > HEARTBEAT_TIMEOUT:
+                    server_log(f"MONITOR: {cid} timed out (last hb {now-last:.1f}s)")
+                    cur = info.get("current_job")
+                    if cur:
+                        server_log(f"MONITOR: Requeueing customer {cur['customer_id']}")
+                        central_queue.put(cur)
+                    dead.append(cid)
+            for cid in dead:
+                try:
+                    clients[cid]["sock"].close()
+                except:
+                    pass
+                clients.pop(cid, None)
+        emit_snapshot()
+        time.sleep(1)
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="L I N E A R"
-            android:textStyle="bold"
-            android:textColor="#006064"
-            android:padding="8dp"/>
-        
-        <View android:layout_width="2dp" android:layout_height="match_parent" android:background="#006064" android:layout_margin="10dp"/>
+# ---------------- TCP Server ----------------
+def accept_clients(stop):
+    serv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    serv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    serv.bind((HOST, TCP_PORT))
+    serv.listen(20)
+    serv.settimeout(1)
+    server_log(f"TCP listening on port {TCP_PORT}")
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="H O R I Z O N T A L"
-            android:textColor="#006064"
-            android:padding="8dp"/>
-
-    </LinearLayout>
-
-    <!-- Horizontal Guideline separating top and bottom halves -->
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.5" />
-
-    <!-- 2. RelativeLayout Demo (Bottom Left Quadrant) -->
-    <RelativeLayout
-        android:id="@+id/relative_layout_section"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="#FFF3E0"
-        android:padding="10dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/vertical_guideline"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/guideline">
-
-        <TextView
-            android:id="@+id/tv_relative_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Relative Layout"
-            android:textStyle="bold"
-            android:textColor="#FF6F00"
-            android:layout_alignParentTop="true"
-            android:layout_centerHorizontal="true"/>
-
-        <Button
-            android:id="@+id/btn_center"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Centered"
-            android:layout_centerInParent="true"/>
-
-        <Button
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Bottom Right"
-            android:layout_alignParentBottom="true"
-            android:layout_alignParentRight="true"/>
-
-    </RelativeLayout>
-
-    <!-- Vertical Guideline separating bottom quadrants -->
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/vertical_guideline"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.5" />
-        
-    <!-- 3. FrameLayout Demo (Bottom Right Quadrant - for stacking) -->
-    <FrameLayout
-        android:id="@+id/frame_layout_section"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="#E8F5E9"
-        android:padding="10dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/vertical_guideline"
-        app:layout_constraintTop_toTopOf="@+id/guideline">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Frame Layout"
-            android:textStyle="bold"
-            android:textColor="#388E3C"
-            android:layout_gravity="top|center_horizontal"/>
-            
-        <!-- Items in FrameLayout are stacked, last one on top -->
-        <View
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:background="#66BB6A"
-            android:layout_gravity="center"/> 
-        
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Overlay Text"
-            android:textColor="@android:color/white"
-            android:layout_gravity="center"/> 
-
-    </FrameLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
-
---- Functionality (MainActivity.java) ---
-
-package com.example.layoutdemo;
-
-import androidx.appcompat.app.AppCompatActivity;
-import android.os.Bundle;
-
-public class MainActivity extends AppCompatActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        
-        // No dynamic Java logic is required; this app is purely for layout demonstration.
-    }
-}
-
-
-
-
-
-
-
-==============================================
-APP: Simple Calculator App
-==============================================
-NOTE: Handles +, -, *, / operations and basic input display.
-
---- AndroidManifest.xml (Modifications) ---
-
-<!-- No special permissions or components required -->
-<manifest ...>
-    <application ...>
-        <activity android:name=".MainActivity" android:exported="true">...</activity>
-    </application>
-</manifest>
-
---- UI (activity_main.xml) ---
-
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="10dp"
-    android:gravity="center_horizontal"
-    android:background="#f5f5f5">
-
-    <!-- Display -->
-    <TextView
-        android:id="@+id/tv_display"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="#000000"
-        android:gravity="bottom|end"
-        android:padding="16dp"
-        android:text="0"
-        android:textColor="@android:color/white"
-        android:textSize="56sp"
-        android:maxLines="1"
-        android:ellipsize="start"/>
-
-    <!-- Button Grid Layout -->
-    <GridLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:columnCount="4"
-        android:rowCount="5"
-        android:layout_marginTop="10dp">
-        
-        <!-- Row 1: Clear, Toggle Sign, Percentage, Divide -->
-        <Button style="@style/CalculatorButton.Function" android:text="C" android:id="@+id/btn_clear" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Function" android:text="+/-" android:id="@+id/btn_toggle_sign" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Function" android:text="%" android:id="@+id/btn_percent" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Operator" android:text="/" android:id="@+id/btn_divide" android:layout_columnWeight="1"/>
-        
-        <!-- Row 2: 7, 8, 9, Multiply -->
-        <Button style="@style/CalculatorButton.Number" android:text="7" android:id="@+id/btn_7" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Number" android:text="8" android:id="@+id/btn_8" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Number" android:text="9" android:id="@+id/btn_9" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Operator" android:text="*" android:id="@+id/btn_multiply" android:layout_columnWeight="1"/>
-        
-        <!-- Row 3: 4, 5, 6, Subtract -->
-        <Button style="@style/CalculatorButton.Number" android:text="4" android:id="@+id/btn_4" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Number" android:text="5" android:id="@+id/btn_5" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Number" android:text="6" android:id="@+id/btn_6" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Operator" android:text="-" android:id="@+id/btn_subtract" android:layout_columnWeight="1"/>
-        
-        <!-- Row 4: 1, 2, 3, Add -->
-        <Button style="@style/CalculatorButton.Number" android:text="1" android:id="@+id/btn_1" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Number" android:text="2" android:id="@+id/btn_2" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Number" android:text="3" android:id="@+id/btn_3" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Operator" android:text="+" android:id="@+id/btn_add" android:layout_columnWeight="1"/>
-
-        <!-- Row 5: 0, Decimal, Equals -->
-        <Button style="@style/CalculatorButton.Number" android:text="0" android:id="@+id/btn_0" android:layout_columnSpan="2" android:layout_columnWeight="2"/>
-        <Button style="@style/CalculatorButton.Number" android:text="." android:id="@+id/btn_decimal" android:layout_columnWeight="1"/>
-        <Button style="@style/CalculatorButton.Equals" android:text="=" android:id="@+id/btn_equals" android:layout_columnWeight="1"/>
-    </GridLayout>
-
-</LinearLayout>
-
-<!-- You would define these styles in res/values/styles.xml -->
-<!-- Example styles.xml content:
-<resources>
-    <style name="CalculatorButton" parent="Widget.AppCompat.Button">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">90dp</item>
-        <item name="android:textSize">28sp</item>
-        <item name="android:layout_margin">4dp</item>
-        <item name="android:backgroundTint">#E0E0E0</item>
-        <item name="android:textColor">#212121</item>
-    </style>
-    <style name="CalculatorButton.Number" parent="CalculatorButton">
-        <item name="android:backgroundTint">#FFFFFF</item>
-    </style>
-    <style name="CalculatorButton.Operator" parent="CalculatorButton">
-        <item name="android:backgroundTint">#FF9800</item>
-        <item name="android:textColor">#FFFFFF</item>
-    </style>
-    <style name="CalculatorButton.Function" parent="CalculatorButton">
-        <item name="android:backgroundTint">#BDBDBD</item>
-    </style>
-    <style name="CalculatorButton.Equals" parent="CalculatorButton.Operator">
-        <item name="android:backgroundTint">#4CAF50</item>
-    </style>
-</resources>
--->
-
---- Functionality (MainActivity.java) ---
-
-package com.example.calculatorapp;
-
-import androidx.appcompat.app.AppCompatActivity;
-import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
-import android.widget.Toast;
-
-public class MainActivity extends AppCompatActivity {
-
-    private TextView display;
-    private double currentValue = 0;
-    private String currentOperator = "";
-    private boolean waitingForNewNumber = true;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        display = findViewById(R.id.tv_display);
-
-        // Setup listeners for all buttons
-        setupNumberButtons();
-        setupOperatorButtons();
-        setupFunctionButtons();
-    }
-    
-    // Attaches listeners to digits (0-9) and decimal point
-    private void setupNumberButtons() {
-        int[] numberButtonIds = {R.id.btn_0, R.id.btn_1, R.id.btn_2, R.id.btn_3, R.id.btn_4, R.id.btn_5, R.id.btn_6, R.id.btn_7, R.id.btn_8, R.id.btn_9, R.id.btn_decimal};
-        
-        View.OnClickListener numberListener = v -> {
-            Button b = (Button) v;
-            String buttonText = b.getText().toString();
-            
-            if (waitingForNewNumber) {
-                // If starting a new number or after equals
-                display.setText(buttonText.equals(".") ? "0." : buttonText);
-                waitingForNewNumber = false;
-            } else if (buttonText.equals(".")) {
-                // Prevent multiple decimals
-                if (!display.getText().toString().contains(".")) {
-                    display.append(".");
-                }
-            } else {
-                // Append digits
-                if (display.getText().toString().equals("0")) {
-                    display.setText(buttonText);
-                } else {
-                    display.append(buttonText);
-                }
+    while not stop.is_set():
+        try:
+            conn, addr = serv.accept()
+        except socket.timeout:
+            continue
+        cid = f"client_{int(time.time()*1000)%100000}"
+        with clients_lock:
+            clients[cid] = {
+                "sock": conn,
+                "addr": addr,
+                "busy": False,
+                "last_heartbeat": time.time(),
+                "current_job": None,
+                "jobs_done": 0,
+                "busy_time": 0.0,
+                "last_active": time.time(),
+                "started_ts": None
             }
-        };
+        server_log(f"TCP Connected: {cid} from {addr}")
+        try:
+            conn.sendall((json.dumps({"type":"assign","id":cid}) + "\n").encode())
+        except:
+            pass
+        threading.Thread(target=client_recv_loop, args=(cid, conn), daemon=True).start()
+        emit_snapshot()
 
-        for (int id : numberButtonIds) {
-            findViewById(id).setOnClickListener(numberListener);
-        }
-    }
-    
-    // Attaches listeners to +, -, *, /
-    private void setupOperatorButtons() {
-        int[] operatorButtonIds = {R.id.btn_add, R.id.btn_subtract, R.id.btn_multiply, R.id.btn_divide};
-        
-        View.OnClickListener operatorListener = v -> {
-            Button b = (Button) v;
-            String newOperator = b.getText().toString();
-            
-            if (!waitingForNewNumber && !currentOperator.isEmpty()) {
-                // If chaining operations, calculate the pending one first
-                performCalculation();
-            } else {
-                // Load the first value
-                try {
-                    currentValue = Double.parseDouble(display.getText().toString());
-                } catch (NumberFormatException e) {
-                    currentValue = 0;
-                }
-            }
-            
-            currentOperator = newOperator;
-            waitingForNewNumber = true;
-        };
+def client_recv_loop(cid, conn):
+    buf = b""
+    try:
+        while True:
+            data = conn.recv(4096)
+            if not data:
+                break
+            buf += data
+            while b"\n" in buf:
+                line, buf = buf.split(b"\n", 1)
+                if not line:
+                    continue
+                try:
+                    msg = json.loads(line.decode())
+                except:
+                    continue
+                handle_message(cid, msg)
+    except Exception as e:
+        server_log(f"[client_recv_loop] error {e}")
+    finally:
+        server_log(f"TCP Closed: {cid}")
+        with clients_lock:
+            info = clients.pop(cid, None)
+            if info and info.get("current_job"):
+                central_queue.put(info["current_job"])
+        emit_snapshot()
 
-        for (int id : operatorButtonIds) {
-            findViewById(id).setOnClickListener(operatorListener);
-        }
-        
-        // Equals button listener
-        findViewById(R.id.btn_equals).setOnClickListener(v -> {
-            if (!currentOperator.isEmpty()) {
-                performCalculation();
-                currentOperator = ""; // Reset operator after equals
-                waitingForNewNumber = true;
-            }
-        });
-    }
+def handle_message(cid, msg):
+    typ = msg.get("type")
+    now = time.time()
+    with clients_lock:
+        if cid not in clients:
+            return
 
-    // Attaches listeners to C, +/-, %
-    private void setupFunctionButtons() {
-        // Clear (C) button
-        findViewById(R.id.btn_clear).setOnClickListener(v -> {
-            display.setText("0");
-            currentValue = 0;
-            currentOperator = "";
-            waitingForNewNumber = true;
-        });
-        
-        // Toggle Sign (+/-) button
-        findViewById(R.id.btn_toggle_sign).setOnClickListener(v -> {
-            try {
-                double val = Double.parseDouble(display.getText().toString());
-                val = -val;
-                display.setText(formatResult(val));
-            } catch (NumberFormatException e) {
-                // Ignore if invalid
-            }
-        });
-        
-        // Percentage (%) button
-        findViewById(R.id.btn_percent).setOnClickListener(v -> {
-            try {
-                double val = Double.parseDouble(display.getText().toString());
-                val = val / 100.0;
-                display.setText(formatResult(val));
-            } catch (NumberFormatException e) {
-                 // Ignore if invalid
-            }
-        });
-    }
-    
-    // Core calculation logic
-    private void performCalculation() {
-        double secondValue = 0;
-        try {
-            secondValue = Double.parseDouble(display.getText().toString());
-        } catch (NumberFormatException e) {
-            Toast.makeText(this, "Invalid number input.", Toast.LENGTH_SHORT).show();
-            return;
-        }
+    if typ == "heartbeat":
+        with clients_lock:
+            clients[cid]["last_heartbeat"] = now
 
-        switch (currentOperator) {
-            case "+":
-                currentValue += secondValue;
-                break;
-            case "-":
-                currentValue -= secondValue;
-                break;
-            case "*":
-                currentValue *= secondValue;
-                break;
-            case "/":
-                if (secondValue != 0) {
-                    currentValue /= secondValue;
-                } else {
-                    // Handle division by zero error
-                    display.setText("Error");
-                    currentValue = 0;
-                    currentOperator = "";
-                    waitingForNewNumber = true;
-                    Toast.makeText(this, "Cannot divide by zero.", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                break;
-            default:
-                // No operator pending, just display the number
-                currentValue = secondValue;
-                break;
-        }
+    elif typ == "done":
+        customer_id = msg.get("customer_id")
+        service_time = msg.get("service_time")
+        try:
+            service_time = float(service_time)
+        except:
+            service_time = None
+        finished = time.time()
 
-        display.setText(formatResult(currentValue));
-        waitingForNewNumber = true;
+        # update DB & metrics; update client stats
+        with clients_lock:
+            info = clients.get(cid)
+            if info:
+                info["busy"] = False
+                cur = info.get("current_job")
+                start_ts = info.get("started_ts") or (cur.get("started") if cur else None)
+                if start_ts:
+                    delta = finished - start_ts
+                    info["busy_time"] = info.get("busy_time", 0.0) + delta
+                info["jobs_done"] = info.get("jobs_done", 0) + 1
+                info["current_job"] = None
+                info["started_ts"] = None
+                info["last_active"] = time.time()
+
+        db_upsert({
+            "customer_id": customer_id,
+            "finished": finished,
+            "service_time": service_time,
+            "assigned_worker": cid
+        })
+
+        with metrics_lock:
+            metrics["total_completed"] += 1
+            if service_time:
+                metrics["total_service_time"] += float(service_time)
+
+        server_log(f"DONE: {cid} finished customer {customer_id}")
+    emit_snapshot()
+
+# ---------------- Snapshot, Amdahl & control ----------------
+def make_snapshot():
+    uptime = time.time() - start_time
+    with clients_lock:
+        counters = []
+        for idx, (cid, info) in enumerate(clients.items(), start=1):
+            busy = bool(info.get("busy"))
+            jobs_done = info.get("jobs_done", 0)
+            busy_time = info.get("busy_time", 0.0)
+            util = (busy_time / uptime) * 100.0 if uptime > 0 else 0.0
+            counters.append({
+                "counter": f"Counter {idx}",
+                "worker": cid,
+                "busy": busy,
+                "customer": info.get("current_job", {}).get("customer_id") if info.get("current_job") else None,
+                "service_time": info.get("current_job", {}).get("service_time") if info.get("current_job") else None,
+                "jobs_done": jobs_done,
+                "busy_time": round(busy_time, 2),
+                "util_percent": round(util, 1),
+                "addr": info.get("addr")
+            })
+
+    qsize = central_queue.qsize()
+    queue_preview = list(central_queue.queue)[:20]
+    with metrics_lock:
+        m = metrics.copy()
+
+    # Amdahl computations
+    N = max(1, len(clients))  # number of workers
+    serial = float(control.get("serial_fraction", 0.2))
+    # theoretical speedup S(N) = 1 / (serial + (1-serial)/N)
+    theoretical = 1.0 / (serial + (1.0 - serial) / float(N))
+    # estimated single-worker throughput (jobs/sec) from avg service time seen so far
+    total_completed = m.get("total_completed", 0)
+    total_service_time = m.get("total_service_time", 0.0)
+    avg_service = (total_service_time / total_completed) if total_completed > 0 else ((SERVICE_MIN + SERVICE_MAX) / 2.0)
+    single_worker_throughput = (1.0 / avg_service) if avg_service > 0 else 0.0
+    current_throughput = (total_completed / uptime) if uptime > 0 else 0.0
+    measured_speedup = (current_throughput / single_worker_throughput) if single_worker_throughput > 0 else 0.0
+
+    snap = {
+        "queue_size": qsize,
+        "queue_preview": queue_preview,
+        "counters": counters,
+        "metrics": m,
+        "time": time.time(),
+        "running": control["running"],
+        "customer_mean": control.get("customer_mean", CUSTOMER_MEAN),
+        "serial_fraction": serial,
+        "theoretical_speedup": round(theoretical, 3),
+        "measured_speedup": round(measured_speedup, 3),
+        "single_worker_throughput": round(single_worker_throughput, 3),
+        "current_throughput": round(current_throughput, 3),
+        "worker_count": N,
+        "uptime": int(uptime)
     }
-    
-    // Helper to format the result (remove unnecessary decimals for integers)
-    private String formatResult(double result) {
-        if (result == (long) result) {
-            return String.format("%d", (long) result);
-        } else {
-            return String.valueOf(result);
-        }
-    }
-}
+    return snap
+
+def emit_snapshot():
+    try:
+        snap = make_snapshot()
+        sio.emit("snapshot", snap)
+    except Exception:
+        pass
+
+# expose control events from UI
+@sio.on("control")
+def on_control(data):
+    # data: { action: "pause" | "resume" | "set_mean" | "set_serial" | "get_history", value: ... }
+    action = data.get("action")
+    if action == "pause":
+        control["running"] = False
+        server_log("Generator paused by UI")
+    elif action == "resume":
+        control["running"] = True
+        server_log("Generator resumed by UI")
+    elif action == "set_mean":
+        try:
+            v = float(data.get("value"))
+            control["customer_mean"] = max(0.2, v)
+            server_log(f"Generator mean set to {control['customer_mean']}")
+        except:
+            pass
+    elif action == "set_serial":
+        try:
+            v = float(data.get("value"))
+            control["serial_fraction"] = min(1.0, max(0.0, v))
+            server_log(f"Serial fraction set to {control['serial_fraction']}")
+        except:
+            pass
+    elif action == "get_history":
+        jobs = recent_jobs(50)
+        sio.emit("history", jobs)
+
+# ---------------- Threads starter ----------------
+def run_server():
+    stop = threading.Event()
+    threads = [
+        threading.Thread(target=accept_clients, args=(stop,), daemon=True),
+        threading.Thread(target=customer_generator, args=(stop,), daemon=True),
+        threading.Thread(target=dispatcher, args=(stop,), daemon=True),
+        threading.Thread(target=monitor_clients, args=(stop,), daemon=True),
+    ]
+    for t in threads:
+        t.start()
+    return stop
+
+# ---------------- Main ----------------
+if __name__ == "__main__":
+    init_db()
+    start_time = time.time()
+    server_log("Starting server (with Amdahl metrics)...")
+    stop_event = run_server()
+    server_log(f"Web dashboard at http://0.0.0.0:{WS_PORT}")
+    sio.run(app, host="0.0.0.0", port=WS_PORT)
+
+
+
+
+
+//server.py
+
+
+
+
+
+"""
+client.py
+Usage: python client.py <server_ip> [--simulate-cpu]
+
+Connects to server TCP port 9999, receives jobs, does CPU or sleep,
+sends heartbeat and sends done messages.
+"""
+import socket
+import sys
+import threading
+import time
+import json
+
+TCP_PORT = 9999
+HEARTBEAT_INTERVAL = 2.0
+
+def cpu_heavy(service_time):
+    iterations = int(150000 * max(1.0, service_time))
+    acc = 0
+    for i in range(iterations):
+        acc += (i ^ (i << 1)) & 0xFFFF
+    return acc
+
+def send_heartbeat(sock, client_id):
+    while True:
+        try:
+            sock.sendall((json.dumps({"type":"heartbeat","id":client_id}) + "\n").encode())
+        except Exception:
+            break
+        time.sleep(HEARTBEAT_INTERVAL)
+
+def handle_server(sock, simulate_cpu):
+    buf = b''
+    client_id = None
+    while True:
+        data = sock.recv(4096)
+        if not data:
+            print("[CLIENT] server closed")
+            break
+        buf += data
+        while b'\n' in buf:
+            line, buf = buf.split(b'\n', 1)
+            if not line: continue
+            try:
+                msg = json.loads(line.decode())
+            except:
+                continue
+            typ = msg.get('type')
+            if typ == 'assign':
+                client_id = msg.get('id')
+                print("[CLIENT] assigned id", client_id)
+                threading.Thread(target=send_heartbeat, args=(sock,client_id), daemon=True).start()
+            elif typ == 'job':
+                cust = msg.get('customer_id')
+                st = float(msg.get('service_time', 2.0))
+                print(f"[CLIENT] Received job {cust} st={st}")
+                if simulate_cpu:
+                    cpu_heavy(st)
+                else:
+                    time.sleep(st)
+                done = {"type":"done", "customer_id": cust, "service_time": st}
+                try:
+                    sock.sendall((json.dumps(done) + "\n").encode())
+                except Exception as e:
+                    print("[CLIENT] failed to send done", e)
+
+def main():
+    if len(sys.argv) < 2:
+        print("Usage: python client.py <server_ip> [--simulate-cpu]")
+        sys.exit(1)
+    server_ip = sys.argv[1]
+    simulate_cpu = ("--simulate-cpu" in sys.argv)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((server_ip, TCP_PORT))
+    print("[CLIENT] Connected to server", server_ip)
+    handle_server(sock, simulate_cpu)
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+//client.py
